@@ -31,10 +31,10 @@ pip install --upgrade git+https://github.com/aligfellow/xyzrender.git
 > 如果需要全部功能，可以安装如下：
 > 
 > ```bash
-> pip install 'xyzrender[crystal]'  # VASP/QE periodic structures (phonopy)
-> pip install 'xyzrender[smi]'      # SMILES input (rdkit)
-> pip install 'xyzrender[cif]'      # CIF input (ase)
-> pip install 'xyzrender[all]'      # everything above
+> pip install xyzrender[crystal]  # VASP/QE periodic structures (phonopy)
+> pip install xyzrender[smi]      # SMILES input (rdkit)
+> pip install xyzrender[cif]      # CIF input (ase)
+> pip install xyzrender[all]      # everything above
 > ```
 
 ### 2. 启动应用
