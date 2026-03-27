@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>XYZRender v5</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root,[data-theme="dark"]{
+  --bg:#07090f;--bg2:#0d1018;--bg3:#131722;--bg4:#1a2030;
+  --bd:#1e2840;--bd2:#2a3550;
+  --teal:#2cffd2;--td:#1aaa8a;--tbg:rgba(44,255,210,.08);
+  --amber:#ffb94a;--abd:rgba(255,185,74,.08);
+  --red:#ff5f6d;--rbg:rgba(255,95,109,.08);
+  --blue:#4a9eff;--purple:#9b6dff;--green:#4aff8a;
+  --tx:#d8dde8;--txm:#6878a0;--txd:#3a4a70;
+  --cvbg:#050709;--sbt:#2a3550;
+}
+[data-theme="light"]{
+  --bg:#f4f6fa;--bg2:#ffffff;--bg3:#edf0f7;--bg4:#e0e5f0;
+  --bd:#d0d8ea;--bd2:#b8c4d8;
+  --teal:#0a8a72;--td:#0a8a72;--tbg:rgba(10,138,114,.08);
+  --amber:#b87a00;--abd:rgba(184,122,0,.08);
+  --red:#c0303a;--rbg:rgba(192,48,58,.08);
+  --blue:#1060c8;--purple:#6040b0;--green:#2a7a40;
+  --tx:#1a2340;--txm:#4a5870;--txd:#8090b0;
+  --cvbg:#e8ecf4;--sbt:#c0cce0;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{height:100%;font-size:var(--fs,12px);}
+body{height:100%;background:var(--bg);color:var(--tx);
+  font-family:'DM Mono',monospace;font-size:1rem;line-height:1.5;
+  overflow:hidden;transition:background .2s,color .2s;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:var(--sbt);border-radius:2px;}
+
+/* TOPBAR */
+#topbar{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;
+  background:var(--bg2);border-bottom:1px solid var(--bd);
+  position:fixed;top:0;left:0;right:0;z-index:100;}
+.logo{font-family:'Syne',sans-serif;font-size:1.333rem;font-weight:800;
+  letter-spacing:-.5px;color:var(--teal);white-space:nowrap;}
+.logo span{color:var(--amber);}
+.tagline{font-size:0.75rem;color:var(--txm);letter-spacing:.12em;text-transform:uppercase;
+  padding-left:10px;border-left:1px solid var(--bd2);white-space:nowrap;}
+.sp0{flex:1;}
+.fs-ctrl{display:flex;align-items:center;gap:5px;}
+.fs-ctrl label{font-size:0.75rem;color:var(--txm);white-space:nowrap;}
+#fs-slider{-webkit-appearance:none;appearance:none;width:60px;height:3px;
+  background:var(--bd2);border-radius:2px;outline:none;cursor:pointer;}
+#fs-slider::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;
+  border-radius:50%;background:var(--teal);cursor:pointer;}
+#fs-val{font-size:0.75rem;color:var(--txm);min-width:22px;}
+#theme-btn{padding:4px 10px;background:var(--bg3);border:1px solid var(--bd);
+  border-radius:14px;color:var(--txm);font-size:0.875rem;cursor:pointer;
+  transition:all .18s;white-space:nowrap;font-family:inherit;}
+#theme-btn:hover{border-color:var(--bd2);color:var(--tx);}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--txd);transition:all .3s;}
+.sdot.ok{background:var(--teal);box-shadow:0 0 5px var(--teal);}
+.sdot.error{background:var(--red);box-shadow:0 0 5px var(--red);}
+.sdot.busy{background:var(--amber);animation:pulse 1s infinite;}
+.slbl{font-size:0.833rem;color:var(--txm);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* LAYOUT — files(190) | controls(300) | preview(rest) */
+#layout{display:grid;grid-template-columns:190px 300px 1fr;
+  height:calc(100vh - 44px);margin-top:44px;overflow:hidden;}
+.panel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--bd);}
+.ph{display:flex;align-items:center;gap:6px;padding:7px 10px;
+  background:var(--bg2);border-bottom:1px solid var(--bd);flex-shrink:0;}
+.ph h2{font-family:'Syne',sans-serif;font-size:0.708rem;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--txm);}
+.ph .ic{color:var(--teal);font-size:0.917rem;}
+.pb{flex:1;overflow-y:auto;padding:8px;}
+.sl{font-size:0.667rem;letter-spacing:.13em;text-transform:uppercase;color:var(--txd);
+  margin:10px 0 4px;padding-bottom:2px;border-bottom:1px solid var(--bd);}
+.sl:first-child{margin-top:0;}
+.sl em{color:var(--bd2);font-style:normal;}
+
+/* CTRL TABS */
+#ctrl-tabs{display:flex;gap:1px;background:var(--bd);flex-shrink:0;}
+.ctab{flex:1;padding:5px 2px;background:var(--bg3);color:var(--txd);
+  font-family:'Syne',sans-serif;font-size:0.667rem;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;cursor:pointer;text-align:center;transition:all .13s;
+  border:none;border-bottom:2px solid transparent;}
+.ctab:hover{color:var(--txm);}
+.ctab.active{color:var(--teal);background:var(--bg2);border-bottom-color:var(--teal);}
+.tab-pane{display:none;overflow-y:auto;padding:8px;height:100%;}
+.tab-pane.active{display:block;}
+
+/* FILE LIST */
+.fl{display:flex;flex-direction:column;gap:2px;}
+.fi{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:4px;
+  cursor:pointer;border:1px solid transparent;transition:all .12s;position:relative;}
+.fi:hover{background:var(--bg3);border-color:var(--bd);}
+.fi.active{background:var(--tbg);border-color:var(--td);}
+.fi.active .fn{color:var(--teal);}
+.eb{font-size:0.625rem;padding:1px 3px;border-radius:3px;background:var(--bg4);
+  color:var(--txm);border:1px solid var(--bd2);flex-shrink:0;text-transform:uppercase;}
+.eb.xyz{background:rgba(74,158,255,.14);color:var(--blue);}
+.eb.mol,.eb.sdf{background:rgba(155,109,255,.14);color:var(--purple);}
+.eb.pdb{background:rgba(255,185,74,.14);color:var(--amber);}
+.eb.cube{background:rgba(255,95,109,.14);color:var(--red);}
+.eb.out,.eb.log{background:var(--tbg);color:var(--teal);}
+.fn{flex:1;font-size:0.875rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fz{font-size:0.708rem;color:var(--txd);flex-shrink:0;}
+.fdel{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:15px;
+  height:15px;border-radius:3px;background:transparent;border:none;color:var(--txd);
+  cursor:pointer;display:none;align-items:center;justify-content:center;
+  font-size:0.833rem;transition:all .12s;}
+.fi:hover .fdel{display:flex;}
+.fdel:hover{background:var(--rbg);color:var(--red);}
+#dz{border:2px dashed var(--bd2);border-radius:6px;padding:12px 8px;
+  text-align:center;color:var(--txm);cursor:pointer;transition:all .2s;margin-top:7px;}
+#dz:hover,#dz.dragover{border-color:var(--td);color:var(--teal);}
+#dz p{font-size:0.833rem;}
+#dz .hint{font-size:0.708rem;color:var(--txd);margin-top:2px;}
+input[type=file]{display:none;}
+.smi-row{display:flex;gap:4px;padding:3px 0;}
+.smi-row input{flex:1;background:var(--bg3);border:1px solid var(--bd);border-radius:4px;
+  color:var(--tx);padding:2px 5px;font-size:0.833rem;outline:none;font-family:inherit;}
+.smi-row input:focus{border-color:var(--td);}
+
+/* FORMAT TABS */
+.fmt-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin:3px 0;}
+.fmt-tab{padding:5px 2px;background:var(--bg3);border:1px solid var(--bd);
+  border-radius:4px;color:var(--txm);cursor:pointer;font-family:'Syne',sans-serif;
+  font-size:0.875rem;font-weight:700;text-align:center;transition:all .12s;}
+.fmt-tab.active{background:var(--tbg);border-color:var(--td);color:var(--teal);}
+.fmt-tab[data-fmt="png"].active{background:rgba(74,158,255,.1);border-color:#2a5a90;color:var(--blue);}
+.fmt-tab[data-fmt="pdf"].active{background:var(--rbg);border-color:#602020;color:var(--red);}
+.fmt-tab[data-fmt="gif"].active{background:var(--abd);border-color:#604020;color:var(--amber);}
+
+/* STYLE GRID */
+.sg{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;}
+.sb{padding:5px 2px;background:var(--bg3);border:1px solid var(--bd);border-radius:4px;
+  color:var(--txm);cursor:pointer;font-size:0.833rem;text-align:center;
+  transition:all .12s;font-family:inherit;}
+.sb:hover{border-color:var(--bd2);color:var(--tx);}
+.sb.active{background:rgba(155,109,255,.12);border-color:#4a2a90;color:var(--purple);}
+.sb-d{font-size:0.625rem;display:block;color:var(--txd);margin-top:1px;}
+
+/* TOGGLE / FIELDS */
+.tr{display:flex;align-items:center;gap:7px;padding:3px 0;
+  border-bottom:1px solid var(--bd);}
+.tr:last-child{border-bottom:none;}
+.tr>label{flex:1;cursor:pointer;user-select:none;font-size:0.875rem;}
+.td2{font-size:0.667rem;color:var(--txm);display:block;margin-top:1px;}
+.tg{position:relative;width:26px;height:14px;flex-shrink:0;}
+.tg input{display:none;}
+.tt{position:absolute;inset:0;background:var(--bg4);border:1px solid var(--bd2);
+  border-radius:7px;transition:all .18s;cursor:pointer;}
+.tk{position:absolute;top:2px;left:2px;width:8px;height:8px;
+  background:var(--txd);border-radius:50%;transition:all .18s;}
+.tg input:checked~.tt{background:rgba(44,255,210,.2);border-color:var(--td);}
+.tg input:checked~.tt .tk{left:14px;background:var(--teal);}
+.tri{display:flex;gap:2px;}
+.tbtn{padding:2px 5px;background:var(--bg3);border:1px solid var(--bd);
+  border-radius:3px;color:var(--txd);font-size:0.708rem;cursor:pointer;
+  transition:all .12s;font-family:inherit;}
+.tbtn:hover{border-color:var(--bd2);color:var(--tx);}
+.tbtn.aon{background:var(--tbg);border-color:var(--td);color:var(--teal);}
+.tbtn.aoff{background:var(--rbg);border-color:#602020;color:var(--red);}
+.fr{display:flex;align-items:center;gap:5px;padding:2px 0;}
+.fr label{width:76px;flex-shrink:0;color:var(--txm);font-size:0.75rem;}
+.fr input,.fr select,.fr textarea{flex:1;background:var(--bg3);border:1px solid var(--bd);
+  border-radius:4px;color:var(--tx);padding:2px 5px;font-size:0.833rem;outline:none;
+  transition:border .12s;font-family:inherit;}
+.fr input:focus,.fr select:focus{border-color:var(--td);}
+.fr select{appearance:none;cursor:pointer;}
+.ch{display:flex;align-items:center;gap:4px;padding:4px 0;cursor:pointer;
+  user-select:none;color:var(--txm);font-size:0.667rem;letter-spacing:.12em;
+  text-transform:uppercase;border-bottom:1px solid var(--bd);
+  margin-bottom:4px;margin-top:8px;}
+.ch .chev{transition:transform .18s;font-size:0.583rem;}
+.ch.open .chev{transform:rotate(90deg);}
+.cb{overflow:hidden;transition:max-height .25s ease;}
+.cb.closed{max-height:0!important;}
+.surf-box{background:var(--bg3);border:1px solid var(--bd);border-radius:4px;
+  padding:5px 7px;margin:3px 0;}
+.surf-box-t{font-size:0.667rem;letter-spacing:.1em;text-transform:uppercase;color:var(--txm);
+  margin-bottom:3px;display:flex;align-items:center;gap:4px;}
+.surf-dot{width:4px;height:4px;border-radius:50%;background:var(--txd);flex-shrink:0;}
+.surf-box.as .surf-dot{background:var(--teal);box-shadow:0 0 4px var(--teal);}
+.hl-item{display:flex;align-items:center;gap:3px;margin-bottom:3px;}
+.hl-item input{flex:1;background:var(--bg3);border:1px solid var(--bd);border-radius:4px;
+  color:var(--tx);padding:2px 5px;font-size:0.833rem;outline:none;font-family:inherit;}
+.hl-item input:focus{border-color:var(--td);}
+.hl-item .dx{background:none;border:none;color:var(--txd);cursor:pointer;
+  font-size:0.917rem;padding:0 2px;}
+.hl-item .dx:hover{color:var(--red);}
+.add-btn{padding:3px 7px;background:var(--bg3);border:1px solid var(--bd);border-radius:4px;
+  color:var(--txm);font-size:0.75rem;cursor:pointer;margin-top:3px;
+  transition:all .12s;font-family:inherit;}
+.add-btn:hover{border-color:var(--td);color:var(--teal);}
+.reg-item{display:grid;grid-template-columns:1fr auto;gap:3px;margin-bottom:3px;}
+.reg-item input,.reg-item select{background:var(--bg3);border:1px solid var(--bd);
+  border-radius:4px;color:var(--tx);padding:2px 5px;font-size:0.833rem;
+  outline:none;font-family:inherit;}
+.mx{font-size:0.667rem;color:var(--amber);padding:2px 5px;background:var(--abd);
+  border:1px solid rgba(255,185,74,.2);border-radius:3px;margin:2px 0;display:none;}
+.mx.show{display:block;}
+
+/* CURRENT FILE BOX */
+#sd{background:var(--bg3);border:1px solid var(--bd);border-radius:4px;
+  padding:5px 7px;margin-bottom:5px;}
+#sd .sl2{font-size:0.625rem;color:var(--txd);letter-spacing:.1em;text-transform:uppercase;}
+#sn{font-size:0.917rem;color:var(--teal);margin-top:2px;word-break:break-all;}
+#sn.none{color:var(--txd);font-style:italic;font-size:0.833rem;}
+
+/* RENDER BUTTON */
+#rb{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;
+  padding:8px;background:linear-gradient(135deg,rgba(44,255,210,.14),rgba(44,255,210,.04));
+  border:1px solid var(--td);border-radius:4px;color:var(--teal);
+  font-family:'Syne',sans-serif;font-size:0.917rem;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;cursor:pointer;transition:all .18s;margin-top:7px;}
+#rb:hover{background:rgba(44,255,210,.2);}
+#rb:disabled{opacity:.4;cursor:not-allowed;background:var(--bg3);
+  border-color:var(--bd);color:var(--txm);}
+#rb .sp2{width:10px;height:10px;border:2px solid rgba(44,255,210,.3);
+  border-top-color:var(--teal);border-radius:50%;
+  animation:spin .7s linear infinite;display:none;}
+#rb.loading .sp2{display:block;}
+#rb.loading .bt{opacity:.6;}
+@keyframes spin{to{transform:rotate(360deg)}}
+#log{background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:4px 6px;
+  font-size:0.75rem;color:var(--txm);max-height:50px;overflow-y:auto;margin-top:4px;
+  white-space:pre-wrap;word-break:break-all;display:none;}
+#log.v{display:block;}
+#log.err{color:var(--red);border-color:rgba(255,95,109,.3);}
+#log.ok{color:var(--teal);border-color:rgba(44,255,210,.3);}
+
+/* PREVIEW PANEL — preview takes most space */
+#preview-panel{border-right:none;}
+#preview-panel .pb{padding:0;display:flex;flex-direction:column;height:100%;}
+#vp{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 20% 20%,rgba(44,255,210,.04),transparent 50%),
+             radial-gradient(ellipse at 80% 80%,rgba(155,109,255,.04),transparent 50%),
+             var(--bg);
+  position:relative;overflow:hidden;}
+#vp .gbg{position:absolute;inset:0;
+  background-image:linear-gradient(var(--bd) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--bd) 1px,transparent 1px);
+  background-size:40px 40px;opacity:.14;pointer-events:none;}
+#pimg{max-width:96%;max-height:96%;object-fit:contain;border-radius:4px;
+  box-shadow:0 8px 40px rgba(0,0,0,.5);display:none;position:relative;
+  z-index:1;animation:fi .3s ease;}
+#psvg{max-width:96%;max-height:96%;display:none;position:relative;z-index:1;
+  animation:fi .3s ease;filter:drop-shadow(0 4px 20px rgba(0,0,0,.4));}
+@keyframes fi{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+#pph{text-align:center;color:var(--txd);z-index:1;}
+#pph svg{margin-bottom:8px;opacity:.14;display:block;margin-left:auto;margin-right:auto;}
+#pph p{font-size:1rem;}
+#pph .hint{font-size:0.833rem;margin-top:4px;}
+
+/* TOOLBAR below preview */
+#ptb{display:flex;align-items:center;gap:5px;padding:5px 10px;
+  background:var(--bg2);border-top:1px solid var(--bd);flex-shrink:0;flex-wrap:wrap;}
+#pfn{font-size:0.833rem;color:var(--txm);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;flex:1;min-width:0;}
+.tb2{display:flex;align-items:center;gap:3px;padding:3px 8px;background:var(--bg3);
+  border:1px solid var(--bd);border-radius:4px;color:var(--txm);font-size:0.833rem;
+  cursor:pointer;transition:all .12s;text-decoration:none;white-space:nowrap;
+  font-family:inherit;}
+.tb2:hover{border-color:var(--bd2);color:var(--tx);}
+.tb2.pri{border-color:var(--td);color:var(--teal);}
+.tb2.pri:hover{background:var(--tbg);}
+.tb2.save-btn{border-color:var(--amber);color:var(--amber);}
+.tb2.save-btn:hover{background:var(--abd);}
+
+/* DUAL GALLERY */
+#gal{flex-shrink:0;border-top:1px solid var(--bd);background:var(--bg2);}
+.gsec{padding:5px 10px;}
+.gsec+.gsec{border-top:1px solid var(--bd);}
+.ghead{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.ghead h3{font-size:0.667rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--txd);font-family:'Syne',sans-serif;font-weight:700;}
+.ghact{display:flex;gap:4px;}
+.gcl{background:none;border:none;color:var(--txd);cursor:pointer;font-size:0.75rem;
+  padding:2px 5px;border-radius:3px;transition:all .12s;font-family:inherit;}
+.gcl:hover{background:var(--rbg);color:var(--red);}
+.gsave-all{background:none;border:1px solid var(--amber);color:var(--amber);cursor:pointer;
+  font-size:0.708rem;padding:1px 6px;border-radius:3px;transition:all .12s;font-family:inherit;}
+.gsave-all:hover{background:var(--abd);}
+.gg{display:flex;gap:4px;flex-wrap:wrap;max-height:68px;overflow-y:auto;}
+.gi{display:flex;align-items:center;gap:3px;padding:2px 5px;background:var(--bg3);
+  border:1px solid var(--bd);border-radius:4px;cursor:pointer;
+  transition:all .12s;max-width:170px;}
+.gi:hover{border-color:var(--bd2);}
+.gi.active{border-color:var(--td);background:var(--tbg);}
+.gin{font-size:0.75rem;color:var(--tx);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:95px;}
+.gid{background:none;border:none;color:var(--txd);cursor:pointer;font-size:0.75rem;
+  padding:0 2px;transition:color .12s;font-family:inherit;}
+.gid:hover{color:var(--red);}
+.gsv{background:none;border:none;color:var(--amber);cursor:pointer;font-size:0.75rem;
+  padding:0 2px;transition:all .12s;font-family:inherit;text-decoration:none;}
+.gsv:hover{background:var(--abd);border-radius:2px;}
+.gb{font-size:0.625rem;padding:1px 3px;border-radius:2px;background:var(--bg4);
+  color:var(--txd);flex-shrink:0;text-transform:uppercase;}
+.gb.sv{background:var(--tbg);color:var(--teal);}
+
+/* PROGRESS + TOAST */
+#pb2{height:2px;background:var(--teal);width:0%;transition:width .3s;
+  position:fixed;top:44px;left:0;z-index:200;box-shadow:0 0 6px var(--teal);}
+#tc{position:fixed;bottom:14px;right:14px;z-index:999;display:flex;flex-direction:column;gap:4px;}
+.toast{display:flex;align-items:center;gap:7px;padding:7px 11px;background:var(--bg3);
+  border:1px solid var(--bd2);border-radius:4px;font-size:0.833rem;min-width:200px;
+  animation:si .2s ease;box-shadow:0 5px 14px rgba(0,0,0,.35);}
+.toast.success{border-color:var(--td);}
+.toast.error{border-color:rgba(255,95,109,.4);}
+.tdot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.toast.success .tdot{background:var(--teal);}
+.toast.error .tdot{background:var(--red);}
+.tmsg{flex:1;}
+.tcl{background:none;border:none;color:var(--txm);cursor:pointer;font-size:1rem;}
+@keyframes si{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+.empty{text-align:center;padding:6px;color:var(--txd);font-size:0.792rem;}
+
+/* VIEWER MODAL */
+#vmodal{display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(7,9,15,.92);backdrop-filter:blur(4px);
+  flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+#vmodal.open{display:flex;}
+#vwrap{position:relative;background:var(--bg2);border:1px solid var(--bd2);
+  border-radius:8px;overflow:hidden;box-shadow:0 20px 70px rgba(0,0,0,.7);}
+#molc{display:block;cursor:grab;background:var(--cvbg);}
+#molc:active{cursor:grabbing;}
+#vhud{position:absolute;top:0;left:0;right:0;display:flex;
+  justify-content:space-between;padding:8px 10px;pointer-events:none;}
+.hchip{background:rgba(13,16,24,.85);border:1px solid var(--bd2);border-radius:4px;
+  padding:4px 8px;font-size:0.792rem;color:var(--txm);pointer-events:all;}
+.hchip strong{display:block;font-size:0.667rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--txd);margin-bottom:2px;}
+#hmx{font-size:0.708rem;color:var(--teal);line-height:1.6;}
+#vctrl{display:flex;flex-direction:column;gap:7px;width:100%;max-width:720px;
+  background:var(--bg2);border:1px solid var(--bd2);border-radius:7px;padding:10px 14px;}
+.vrow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.vlbl{font-size:0.75rem;color:var(--txm);min-width:50px;}
+.kbd{display:inline-flex;padding:1px 4px;background:var(--bg4);
+  border:1px solid var(--bd2);border-radius:3px;font-size:0.75rem;color:var(--txm);}
+.vbtn{padding:5px 12px;border-radius:4px;font-family:'Syne',sans-serif;font-size:0.875rem;
+  font-weight:700;letter-spacing:.06em;cursor:pointer;transition:all .18s;border:1px solid;}
+.vbtn.pri{background:linear-gradient(135deg,rgba(44,255,210,.18),rgba(44,255,210,.06));
+  border-color:var(--td);color:var(--teal);}
+.vbtn.pri:hover{background:rgba(44,255,210,.26);}
+.vbtn.sec{background:var(--bg3);border-color:var(--bd);color:var(--txm);}
+.vbtn.sec:hover{border-color:var(--bd2);color:var(--tx);}
+.vbtn.dng{background:var(--rbg);border-color:var(--red);color:var(--red);}
+#spdslider{-webkit-appearance:none;appearance:none;width:90px;height:3px;
+  background:var(--bd2);border-radius:2px;outline:none;}
+#spdslider::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;
+  border-radius:50%;background:var(--teal);cursor:pointer;}
+#axisc{position:absolute;bottom:8px;right:8px;width:50px;height:50px;pointer-events:none;}
+</style>
+</head>
+<body>
+<div id="pb2"></div>
+<header id="topbar">
+  <div class="logo">XYZ<span>Render</span></div>
+  <div class="tagline">分子图形工作站 v5</div>
+  <div class="sp0"></div>
+  <div class="fs-ctrl">
+    <label for="fs-slider">字号</label>
+    <input type="range" id="fs-slider" min="10" max="16" value="12" step="1">
+    <span id="fs-val">12px</span>
+  </div>
+  <button id="theme-btn" onclick="toggleTheme()">🌙 暗色</button>
+  <div class="sdot" id="dot"></div>
+  <div class="slbl" id="slbl">就绪</div>
+</header>
+
+<!-- Trackball Viewer Modal -->
+<div id="vmodal">
+  <div id="vwrap">
+    <canvas id="molc" width="720" height="500"></canvas>
+    <div id="vhud">
+      <div class="hchip"><strong>分子</strong><span id="hmol">—</span></div>
+      <div class="hchip" style="text-align:right;"><strong>旋转矩阵 R</strong><div id="hmx">—</div></div>
+    </div>
+    <canvas id="axisc" width="50" height="50"></canvas>
+  </div>
+  <div id="vctrl">
+    <div class="vrow">
+      <div class="vlbl">键盘</div>
+      <span class="kbd">←→</span><span style="font-size:9px;color:var(--txd);">Y轴</span>
+      <span class="kbd">↑↓</span><span style="font-size:9px;color:var(--txd);">X轴</span>
+      <span class="kbd">PgUp/Dn</span><span style="font-size:9px;color:var(--txd);">Z轴</span>
+      <span class="kbd">Shift</span><span style="font-size:9px;color:var(--txd);">慢速</span>
+      <span class="kbd">R</span><span style="font-size:9px;color:var(--txd);">重置</span>
+      <span class="kbd">Esc</span><span style="font-size:9px;color:var(--txd);">关闭</span>
+    </div>
+    <div class="vrow">
+      <div class="vlbl">速度</div>
+      <input type="range" id="spdslider" min="1" max="30" value="8">
+      <span id="spdval" style="font-size:9px;color:var(--txm);">8°</span>
+      <div style="flex:1"></div>
+      <button class="vbtn sec" id="vr">⊙ 重置</button>
+      <button class="vbtn sec" id="vpca">⌖ PCA</button>
+      <button class="vbtn dng" id="vcl">✕ 关闭</button>
+      <button class="vbtn pri" id="vapl">✓ 应用旋转并渲染</button>
+    </div>
+    <div style="font-size:8.5px;color:var(--txd);">🖱 拖拽 Arcball 旋转 · 滚轮缩放 · 参考 briling/v</div>
+  </div>
+</div>
+
+<div id="layout">
+<!-- Panel 1: Files -->
+<div class="panel">
+  <div class="ph"><span class="ic">⬡</span><h2>分子文件</h2></div>
+  <div class="pb">
+    <div class="sl">MOLECULES 文件夹</div>
+    <div class="fl" id="mol-list"><div class="empty">暂无分子文件</div></div>
+    <div id="dz" onclick="document.getElementById('fi').click()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 3px;opacity:.4">
+        <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+      </svg>
+      <p>拖拽或点击上传</p><p class="hint">.xyz .mol .sdf .pdb .out .cube .cif</p>
+    </div>
+    <input type="file" id="fi" multiple accept=".xyz,.mol,.mol2,.sdf,.pdb,.out,.log,.gjf,.fchk,.cube,.cif,.smiles">
+    <div class="sl" style="margin-top:8px;">SMILES <em>— --smi</em></div>
+    <div class="smi-row">
+      <input type="text" id="smi-input" placeholder="C1CCCCC1">
+      <button class="add-btn" onclick="useSMILES()" style="margin-top:0;white-space:nowrap;">使用</button>
+    </div>
+  </div>
+</div>
+
+<!-- Panel 2: Controls -->
+<div class="panel" style="border-right:1px solid var(--bd);">
+  <div id="ctrl-tabs">
+    <button class="ctab  active" onclick="switchTab('basic')">基本</button>
+    <button class="ctab" onclick="switchTab('display')">显示</button>
+    <button class="ctab" onclick="switchTab('color')">着色</button>
+    <button class="ctab" onclick="switchTab('surface')">表面</button>
+    <button class="ctab" onclick="switchTab('overlay')">叠加</button>
+    <button class="ctab" onclick="switchTab('gif')">GIF</button>
+    <button class="ctab" onclick="switchTab('crystal')">晶体</button>
+    <button class="ctab" onclick="switchTab('adv')">高级</button>
+  </div>
+  <div class="tab-pane  active" id="tab-basic">
+    <div class="sl">当前文件</div>
+    <div id="sd"><div class="sl2">已选</div><div id="sn" class="none">尚未选择</div></div>
+    <button id="ovbtn" disabled onclick="openViewer()"
+      style="width:100%;padding:7px;background:linear-gradient(135deg,rgba(155,109,255,.15),rgba(155,109,255,.04));border:1px solid #4a2a90;border-radius:4px;color:var(--purple);font-family:'Syne',sans-serif;font-size:10.5px;font-weight:700;letter-spacing:.07em;cursor:pointer;margin-bottom:5px;transition:all .18s;">
+      🖱 交互旋转预览 (Trackball)
+    </button>
+    <div class="sl">输出格式</div>
+    <div class="fmt-tabs">
+      <div class="fmt-tab active" data-fmt="svg">SVG</div>
+      <div class="fmt-tab" data-fmt="png">PNG</div>
+      <div class="fmt-tab" data-fmt="pdf">PDF</div>
+      <div class="fmt-tab" data-fmt="gif">GIF</div>
+    </div>
+    <div class="sl">绘图风格 <em>— --config</em></div>
+    <div class="sg"><button class="sb active" data-style="default">default<span class="sb-d">CPK 渐变雾化</span></button>
+      <button class="sb" data-style="flat">flat<span class="sb-d">扁平 无渐变</span></button>
+      <button class="sb" data-style="paton">paton<span class="sb-d">PyMOL 风格</span></button>
+      <button class="sb" data-style="pmol">pmol<span class="sb-d">球棍+元素色键</span></button>
+      <button class="sb" data-style="skeletal">skeletal<span class="sb-d">骨架式</span></button>
+      <button class="sb" data-style="bubble">bubble<span class="sb-d">空间填充</span></button>
+      <button class="sb" data-style="tube">tube<span class="sb-d">管状棍</span></button>
+      <button class="sb" data-style="wire">wire<span class="sb-d">线框</span></button>
+      <button class="sb" data-style="graph">graph<span class="sb-d">图论风格</span></button></div>
+    <button id="rb" disabled><div class="sp2"></div><span class="bt">▶ 渲染预览</span></button>
+    <div id="log"></div>
+
+  </div>
+  <div class="tab-pane" id="tab-display">
+    <div class="sl">VdW <em>— --vdw</em></div>
+    <label class="tr"><div><span>显示 VdW 球体</span></div>
+      <div class="tg"><input type="checkbox" id="o-vdw" onchange="onVdwChange()"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <div id="vdw-extra" style="display:none;">
+      <div class="fr"><label>范围</label><input type="text" id="o-vdw-r" placeholder="留空=全部,"1-6"=局部"></div>
+      <div class="fr"><label>不透明度</label><input type="text" id="o-vdw-op" placeholder="0.25"></div>
+      <div class="fr"><label>半径缩放</label><input type="text" id="o-vdw-sc" placeholder="1.0"></div>
+      <div class="fr"><label>渐变强度</label><input type="text" id="o-vdw-gr" placeholder="1.0"></div>
+    </div>
+    <div class="sl">氢原子 <em>— --hy</em></div>
+    <div style="display:flex;gap:5px;align-items:center;padding:3px 0;">
+      <div class="tri" id="hy-tri">
+        <button class="tbtn" data-v="all" onclick="setHy('all')">全显</button>
+        <button class="tbtn aon" data-v="auto" onclick="setHy('auto')">自动</button>
+        <button class="tbtn" data-v="none" onclick="setHy('none')">隐藏</button>
+      </div>
+    </div>
+    <div class="fr" id="hy-idx-row" style="display:none;"><div class="fr"><label>指定序号</label><input type="text" id="o-hy-idx" placeholder="7 8 9（1-索引）"></div></div>
+    <div class="sl">深度效果</div>
+    <div style="display:flex;gap:5px;align-items:center;padding:2px 0 3px;">
+      <span style="font-size:10px;color:var(--txm);flex:1;">雾化 --fog</span>
+      <div class="tri" id="fog-tri">
+        <button class="tbtn aon" data-v="on" onclick="setFog('on')">开</button>
+        <button class="tbtn" data-v="auto" onclick="setFog('auto')">预设</button>
+        <button class="tbtn" data-v="off" onclick="setFog('off')">关</button>
+      </div>
+    </div>
+    <div class="fr"><label>雾化强度 -F</label><input type="text" id="o-fog-s" placeholder="0.8"></div>
+    <div style="display:flex;gap:5px;align-items:center;padding:2px 0 3px;">
+      <span style="font-size:10px;color:var(--txm);flex:1;">渐变 --grad</span>
+      <div class="tri" id="grad-tri">
+        <button class="tbtn aon" data-v="on" onclick="setGrad('on')">开</button>
+        <button class="tbtn" data-v="auto" onclick="setGrad('auto')">预设</button>
+        <button class="tbtn" data-v="off" onclick="setGrad('off')">关</button>
+      </div>
+    </div>
+    <div class="fr"><label>渐变强度 -G</label><input type="text" id="o-grad-s" placeholder="1.4"></div>
+    <div class="sl">景深 <em>— --dof</em></div>
+    <label class="tr"><div><span>启用景深模糊</span></div>
+      <div class="tg"><input type="checkbox" id="o-dof"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <div class="fr"><label>模糊强度</label><input type="text" id="o-dof-s" placeholder="3.0"></div>
+    <div class="sl">键显示</div>
+    <label class="tr"><div><span>键级 --bo</span><span class="td2">双/三键、芳香键</span></div>
+      <div class="tg"><input type="checkbox" id="o-bo" checked><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <label class="tr"><div><span>Kekulé -k</span></div>
+      <div class="tg"><input type="checkbox" id="o-kek"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <div style="display:flex;gap:5px;align-items:center;padding:2px 0 3px;">
+      <span style="font-size:10px;color:var(--txm);flex:1;">元素色键 --bond-by-element</span>
+      <div class="tri" id="bbe-tri">
+        <button class="tbtn" data-v="on" onclick="setBBE('on')">开</button>
+        <button class="tbtn aon" data-v="auto" onclick="setBBE('auto')">预设</button>
+        <button class="tbtn" data-v="off" onclick="setBBE('off')">关</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:5px;align-items:center;padding:2px 0 3px;">
+      <span style="font-size:10px;color:var(--txm);flex:1;">管状阴影 --bond-gradient</span>
+      <div class="tri" id="bgr-tri">
+        <button class="tbtn" data-v="on" onclick="setBGR('on')">开</button>
+        <button class="tbtn aon" data-v="auto" onclick="setBGR('auto')">预设</button>
+        <button class="tbtn" data-v="off" onclick="setBGR('off')">关</button>
+      </div>
+    </div>
+    <div class="fr"><label>键截止 Å</label><input type="text" id="o-bcut" placeholder="如 2.0"></div>
+    <label class="tr"><div><span>隐藏所有键 --no-bonds</span></div>
+      <div class="tg"><input type="checkbox" id="o-nobonds"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <div class="sl">标注</div>
+    <div class="fr"><label>序号 --idx</label>
+      <select id="o-idx"><option value="">不显示</option><option value="sn">C1(sn)</option><option value="s">C</option><option value="n">1</option></select>
+    </div>
+    <div style="display:flex;gap:5px;align-items:center;padding:2px 0 3px;">
+      <span style="font-size:10px;color:var(--txm);flex:1;">立体化学 --stereo</span>
+      <div class="tg"><input type="checkbox" id="o-stereo"><div class="tt"><div class="tk"></div></div></div>
+    </div>
+    <div class="fr"><label>标签位置</label>
+      <select id="o-stereo-style"><option value="atom">atom</option><option value="label">label</option></select>
+    </div>
+    <div class="fr"><label>内联标注 -l</label>
+      <textarea id="o-annot" rows="2" style="resize:vertical;font-size:9.5px;" placeholder="每行一条：1 2 d"></textarea>
+    </div>
+    <div class="fr"><label>标签字号</label><input type="text" id="o-lsize" placeholder="30"></div>
+
+  </div>
+  <div class="tab-pane" id="tab-color">
+    <div class="sl">整体颜色 <em>— --mol-color</em></div>
+    <div class="fr"><label>统一颜色</label><input type="text" id="o-molcol" placeholder="gray（留空=CPK）"></div>
+    <div class="sl">高亮 <em>— --hl（可重复）</em></div>
+    <div id="hl-list"></div>
+    <button class="add-btn" onclick="addHighlight()">+ 添加高亮组</button>
+    <div class="sl">键与背景</div>
+    <div class="fr"><label>TS 键色</label><input type="text" id="o-tscol" placeholder="dodgerblue"></div>
+    <div class="fr"><label>NCI 键色</label><input type="text" id="o-ncicol" placeholder="teal"></div>
+    <div class="fr"><label>键颜色</label><input type="text" id="o-bc" placeholder="#333333"></div>
+    <div class="fr"><label>背景色 -B</label><input type="text" id="o-bg" placeholder="#ffffff"></div>
+    <label class="tr"><div><span>透明背景 -t</span></div>
+      <div class="tg"><input type="checkbox" id="o-transp"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <div class="sl">属性色图 <em>— --cmap</em></div>
+    <p style="font-size:8.5px;color:var(--txm);margin-bottom:4px;">每行：原子序号 数值</p>
+    <textarea id="o-cmap" rows="3" style="width:100%;background:var(--bg3);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font-size:9.5px;padding:4px 6px;resize:vertical;outline:none;" placeholder="1  0.45&#10;2 -0.30"></textarea>
+    <div class="fr"><label>数值范围</label><input type="text" id="o-cmrng" placeholder="VMIN VMAX"></div>
+    <div class="fr"><label>色板</label>
+      <select id="o-cmpal"><option value="">viridis</option><option value="viridis">viridis</option>
+<option value="spectral">spectral</option>
+<option value="coolwarm">coolwarm</option>
+<option value="plasma">plasma</option>
+<option value="inferno">inferno</option>
+<option value="magma">magma</option></select>
+    </div>
+    <div style="display:flex;gap:7px;align-items:center;padding:3px 0;">
+      <label style="font-size:9.5px;color:var(--txm);flex:1;">零点对称 --cmap-symm</label>
+      <div class="tg"><input type="checkbox" id="o-cmsymm"><div class="tt"><div class="tk"></div></div></div>
+    </div>
+    <div style="display:flex;gap:7px;align-items:center;padding:3px 0;">
+      <label style="font-size:9.5px;color:var(--txm);flex:1;">色标条 --cbar</label>
+      <div class="tg"><input type="checkbox" id="o-cbar"><div class="tt"><div class="tk"></div></div></div>
+    </div>
+
+  </div>
+  <div class="tab-pane" id="tab-surface">
+    <div class="sl">表面风格 <em>— --surface-style</em></div>
+    <div class="fr"><label>风格</label>
+      <select id="o-surf-style"><option value="">solid（默认）</option><option value="solid">solid</option>
+<option value="mesh">mesh</option>
+<option value="contour">contour</option>
+<option value="dot">dot</option></select>
+    </div>
+    <div class="fr"><label>等值 --iso</label><input type="text" id="o-iso" placeholder="MO:0.05/密度:0.001"></div>
+    <div class="fr"><label>不透明度</label><input type="text" id="o-opac" placeholder="1.0"></div>
+    <div id="surf-mx" class="mx">⚠ --mo/--dens/--esp/--nci-surf 互斥</div>
+    <div class="surf-box" id="box-mo">
+      <div class="surf-box-t"><div class="surf-dot"></div>分子轨道 <em style="font-size:7.5px;">--mo（MO cube）</em></div>
+      <label class="tr" style="margin-bottom:3px;"><div><span>启用 MO</span></div>
+        <div class="tg"><input type="checkbox" id="o-mo" onchange="checkSurfMx()"><div class="tt"><div class="tk"></div></div></div>
+      </label>
+      <div class="fr"><label>正相颜色</label><input type="text" id="o-mop" placeholder="steelblue"></div>
+      <div class="fr"><label>负相颜色</label><input type="text" id="o-mon" placeholder="maroon"></div>
+      <label class="tr"><div><span>Flat MO --flat-mo</span></div>
+      <div class="tg"><input type="checkbox" id="o-flatmo"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+      <div class="fr"><label>模糊 sigma</label><input type="text" id="o-moblur" placeholder="0.8"></div>
+      <div class="fr"><label>上采样</label><input type="text" id="o-moup" placeholder="3"></div>
+    </div>
+    <div class="surf-box" id="box-dens">
+      <div class="surf-box-t"><div class="surf-dot"></div>电子密度 <em style="font-size:7.5px;">--dens</em></div>
+      <label class="tr" style="margin-bottom:3px;"><div><span>启用密度等值面</span></div>
+        <div class="tg"><input type="checkbox" id="o-dens" onchange="checkSurfMx()"><div class="tt"><div class="tk"></div></div></div>
+      </label>
+      <div class="fr"><label>表面颜色</label><input type="text" id="o-dcol" placeholder="steelblue"></div>
+    </div>
+    <div class="surf-box" id="box-esp">
+      <div class="surf-box-t"><div class="surf-dot"></div>ESP <em style="font-size:7.5px;">--esp（密度+ESP cube）</em></div>
+      <div class="fr"><label>ESP cube</label>
+        <select id="o-esp" onchange="checkSurfMx()"><option value="">— 不使用 —</option></select>
+      </div>
+    </div>
+    <div class="surf-box" id="box-ncisurf">
+      <div class="surf-box-t"><div class="surf-dot"></div>NCI 表面 <em style="font-size:7.5px;">--nci-surf</em></div>
+      <div class="fr"><label>RDG cube</label>
+        <select id="o-ncisurf" onchange="checkSurfMx()"><option value="">— 不使用 —</option></select>
+      </div>
+      <div class="fr"><label>着色模式</label>
+        <select id="o-ncimode"><option value="">avg（默认）</option><option value="avg">avg</option>
+<option value="pixel">pixel</option>
+<option value="uniform">uniform</option></select>
+      </div>
+      <div class="fr"><label>密度截止</label><input type="text" id="o-ncicut" placeholder="高级"></div>
+    </div>
+    <div class="ch" id="ch-hull"><span class="chev">▶</span> 凸包 Convex Hull</div>
+    <div class="cb closed" id="cb-hull" style="max-height:220px;">
+      <div class="fr"><label>原子集合</label><input type="text" id="o-hull" placeholder=""all","rings","1-6","1-6|7-12""></div>
+      <div class="fr"><label>颜色</label><input type="text" id="o-hcol" placeholder="steelblue 或 red,blue"></div>
+      <div class="fr"><label>不透明度</label><input type="text" id="o-hop" placeholder="0.35"></div>
+      <div style="display:flex;gap:5px;align-items:center;padding:2px 0;">
+        <label style="font-size:9.5px;color:var(--txm);flex:1;">非键边 --hull-edge</label>
+        <div class="tri" id="hedge-tri">
+          <button class="tbtn aon" data-v="on" onclick="setHEdge('on')">开</button>
+          <button class="tbtn" data-v="off" onclick="setHEdge('off')">关</button>
+        </div>
+      </div>
+      <div class="fr"><label>边宽比</label><input type="text" id="o-heratio" placeholder="0.4"></div>
+    </div>
+
+  </div>
+  <div class="tab-pane" id="tab-overlay">
+    <div class="sl">结构叠加 <em>— --overlay</em></div>
+    <div class="fr"><label>叠加文件</label><select id="o-ovl"><option value="">— 不使用 —</option></select></div>
+    <div class="fr"><label>叠加颜色</label><input type="text" id="o-ovlcol" placeholder="green"></div>
+    <div class="fr"><label>对齐原子</label><input type="text" id="o-align" placeholder="1,2,3 或 1-6（≥3）"></div>
+    <div class="sl">系综 <em>— --ensemble</em></div>
+    <label class="tr"><div><span>多构象叠加</span><span class="td2">多帧 XYZ</span></div>
+      <div class="tg"><input type="checkbox" id="o-ens"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <div class="fr"><label>系综颜色</label><input type="text" id="o-enscol" placeholder="viridis/red,blue"></div>
+    <div class="fr"><label>非参考透明度</label><input type="text" id="o-ensop" placeholder="1.0"></div>
+    <div class="sl">样式区域 <em>— --region（可重复）</em></div>
+    <div id="reg-list"></div>
+    <button class="add-btn" onclick="addRegion()">+ 添加区域</button>
+    <div class="sl">过渡态 / NCI</div>
+    <label class="tr"><div><span>TS 检测 --ts</span><span class="td2">需 QM 输出</span></div>
+      <div class="tg"><input type="checkbox" id="o-ts"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <div class="fr"><label>--ts-frame</label><input type="text" id="o-tsf" placeholder="0"></div>
+    <div class="fr"><label>手动 TS 对</label><input type="text" id="o-tsb" placeholder=""1-6,3-4""></div>
+    <label class="tr"><div><span>NCI 检测 --nci</span></div>
+      <div class="tg"><input type="checkbox" id="o-nci"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <div class="fr"><label>手动 NCI 对</label><input type="text" id="o-ncib" placeholder=""8-9""></div>
+
+  </div>
+  <div class="tab-pane" id="tab-gif">
+    <div class="sl">GIF 模式</div>
+    <div class="fr"><label>旋转轴</label>
+      <select id="o-grot"><option value="y">y</option>
+<option value="x">x</option>
+<option value="z">z</option>
+<option value="xy">xy</option>
+<option value="xz">xz</option>
+<option value="yz">yz</option>
+<option value="yx">yx</option>
+<option value="zx">zx</option>
+<option value="zy">zy</option>
+<option value="-y">-y</option>
+<option value="-x">-x</option>
+<option value="-z">-z</option>
+<option value="-xy">-xy</option>
+<option value="-xz">-xz</option>
+<option value="-yz">-yz</option></select>
+    </div>
+    <label class="tr"><div><span>TS 振动 --gif-ts</span></div>
+      <div class="tg"><input type="checkbox" id="o-gts" onchange="checkGifMx()"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <label class="tr"><div><span>轨迹 --gif-trj</span></div>
+      <div class="tg"><input type="checkbox" id="o-gtrj" onchange="checkGifMx()"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <label class="tr"><div><span>扩散/组装 --gif-diffuse</span></div>
+      <div class="tg"><input type="checkbox" id="o-gdiff"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <div id="gif-mx" class="mx">⚠ --gif-ts 与 --gif-trj 不可同时使用</div>
+    <div class="fr"><label>帧率 --gif-fps</label><input type="text" id="o-gfps" placeholder="10"></div>
+    <div class="fr"><label>旋转帧数</label><input type="text" id="o-rfrm" placeholder="120"></div>
+
+  </div>
+  <div class="tab-pane" id="tab-crystal">
+    <div class="sl">晶体加载 <em>— --crystal</em></div>
+    <div class="fr"><label>格式</label>
+      <select id="o-cryst"><option value="">不使用</option><option value="auto">自动</option><option value="vasp">VASP</option><option value="qe">QE</option></select>
+    </div>
+    <div class="sl">晶胞</div>
+    <label class="tr"><div><span>显示晶胞 --cell</span></div>
+      <div class="tg"><input type="checkbox" id="o-cell"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <label class="tr"><div><span>隐藏晶胞 --no-cell</span></div>
+      <div class="tg"><input type="checkbox" id="o-nocell"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <div class="fr"><label>晶胞颜色</label><input type="text" id="o-cellcol" placeholder="gray"></div>
+    <div class="fr"><label>晶胞线宽</label><input type="text" id="o-cellw" placeholder="2.0"></div>
+    <div class="sl">幽灵 / 坐标轴</div>
+    <div style="display:flex;gap:5px;align-items:center;padding:2px 0 3px;">
+      <span style="font-size:10px;color:var(--txm);flex:1;">幽灵原子 --ghosts</span>
+      <div class="tri" id="ghosts-tri">
+        <button class="tbtn aon" data-v="on" onclick="setGhosts('on')">显示</button>
+        <button class="tbtn" data-v="auto" onclick="setGhosts('auto')">自动</button>
+        <button class="tbtn" data-v="off" onclick="setGhosts('off')">隐藏</button>
+      </div>
+    </div>
+    <div class="fr"><label>幽灵透明度</label><input type="text" id="o-ghostop" placeholder="0.5"></div>
+    <div style="display:flex;gap:5px;align-items:center;padding:2px 0 3px;">
+      <span style="font-size:10px;color:var(--txm);flex:1;">坐标轴 --axes</span>
+      <div class="tri" id="axes-tri">
+        <button class="tbtn aon" data-v="on" onclick="setAxes('on')">显示</button>
+        <button class="tbtn" data-v="auto" onclick="setAxes('auto')">自动</button>
+        <button class="tbtn" data-v="off" onclick="setAxes('off')">隐藏</button>
+      </div>
+    </div>
+    <div class="fr"><label>晶向 --axis</label><input type="text" id="o-axis" placeholder="111 或 001"></div>
+    <div class="fr"><label>超胞 M N L</label><input type="text" id="o-super" placeholder="2 2 1"></div>
+
+  </div>
+  <div class="tab-pane" id="tab-adv">
+    <div class="sl">画布与尺寸</div>
+    <div class="fr"><label>画布 -S (px)</label><input type="text" id="o-cs" placeholder="800"></div>
+    <div class="fr"><label>原子半径 -a</label><input type="text" id="o-as" placeholder="2.5"></div>
+    <div class="fr"><label>键线宽 -b</label><input type="text" id="o-bw" placeholder="20"></div>
+    <div class="fr"><label>原子描边 -s</label><input type="text" id="o-asw" placeholder="1.5"></div>
+    <div class="fr"><label>DPI (PNG/PDF)</label><input type="text" id="o-dpi" placeholder="300"></div>
+    <div class="sl">分子元数据</div>
+    <div class="fr"><label>电荷 -c</label><input type="text" id="o-chg" placeholder="0"></div>
+    <div class="fr"><label>多重度 -m</label><input type="text" id="o-mult" placeholder="自动"></div>
+    <div class="fr"><label>SDF 帧号</label><input type="text" id="o-molfr" placeholder="0"></div>
+    <div class="sl">键检测</div>
+    <label class="tr"><div><span>重建键 --rebuild</span></div>
+      <div class="tg"><input type="checkbox" id="o-rebuild"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <div class="fr"><label>键阈值 --threshold</label><input type="text" id="o-thresh" placeholder="1.0"></div>
+    <div class="sl">取向</div>
+    <label class="tr"><div><span>禁用自动取向 --no-orient</span></div>
+      <div class="tg"><input type="checkbox" id="o-nori"><div class="tt"><div class="tk"></div></div></div>
+    </label>
+    <div class="sl">自定义 JSON</div>
+    <textarea id="o-json" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font-size:9px;padding:4px 6px;resize:vertical;outline:none;line-height:1.5;" placeholder='eg. {"colors":{"C":"#444"}}'></textarea>
+
+  </div>
+</div>
+
+<!-- Panel 3: Preview -->
+<div class="panel" id="preview-panel">
+  <div class="ph"><span class="ic">◉</span><h2>预览输出</h2></div>
+  <div class="pb">
+    <div id="vp">
+      <div class="gbg"></div>
+      <div id="pph">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+          <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/>
+          <line x1="4.22" y1="4.22" x2="7.76" y2="7.76"/>
+          <line x1="16.24" y1="7.76" x2="19.78" y2="4.22"/>
+          <line x1="4.22" y1="19.78" x2="7.76" y2="16.24"/>
+          <line x1="16.24" y1="16.24" x2="19.78" y2="19.78"/>
+        </svg>
+        <p>选择文件 → 点击 ▶ 渲染预览</p>
+        <p class="hint">渲染到 TEMP/，点击 ⬆ 保存到 FIGURE/</p>
+      </div>
+      <img id="pimg" alt="">
+      <div id="psvg"></div>
+    </div>
+    <div id="ptb">
+      <span id="pfn">尚无结果</span>
+      <a id="dl" class="tb2 pri" href="#" download style="display:none;">⬇ 下载</a>
+      <button class="tb2 save-btn" id="savebtn" style="display:none;" onclick="saveCurrentToFig()">⬆ 保存到 FIGURE</button>
+      <button class="tb2" id="cpcmd" style="display:none;">⎘ 命令</button>
+      <button class="tb2" id="fsbtn" style="display:none;">⤢ 全屏</button>
+    </div>
+    <div id="gal">
+      <div class="gsec">
+        <div class="ghead">
+          <h3>🔍 TEMP 预览缓存</h3>
+          <div class="ghact">
+            <button class="gsave-all" onclick="saveAllToFig()">⬆ 全部保存</button>
+            <button class="gcl" onclick="clearTemp()">✕ 清空</button>
+          </div>
+        </div>
+        <div class="gg" id="tgal"><div class="empty">TEMP 为空</div></div>
+      </div>
+      <div class="gsec">
+        <div class="ghead">
+          <h3>💾 FIGURE 已保存</h3>
+          <button class="gcl" id="rfg">⟳ 刷新</button>
+        </div>
+        <div class="gg" id="fgal"><div class="empty">FIGURE 为空</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<div id="tc"></div>
+<script>
+
+'use strict';
+const $  = id  => document.getElementById(id);
+const $a = sel => [...document.querySelectorAll(sel)];
+
+/* THEME + FONT SIZE */
+function toggleTheme(){
+  const h=document.documentElement,dark=h.dataset.theme==='dark';
+  h.dataset.theme=dark?'light':'dark';
+  $('theme-btn').textContent=dark?'\u2600\ufe0f \u4eae\u8272':'\ud83c\udf19 \u6697\u8272';
+  localStorage.setItem('xrtheme',h.dataset.theme);
+  drawMol(); // redraw with new bg
+}
+$('fs-slider').addEventListener('input',function(){
+  const v=this.value+'px';
+  document.documentElement.style.fontSize=v;
+  $('fs-val').textContent=v;
+  localStorage.setItem('xrfs',v);
+});
+(()=>{
+  const t=localStorage.getItem('xrtheme');
+  if(t){document.documentElement.dataset.theme=t;
+    $('theme-btn').textContent=t==='light'?'\u2600\ufe0f \u4eae\u8272':'\ud83c\udf19 \u6697\u8272';}
+  const f=localStorage.getItem('xrfs');
+  if(f){document.documentElement.style.fontSize=f;
+    $('fs-slider').value=parseInt(f);$('fs-val').textContent=f;}
+})();
+
+/* ARCBALL MATH */
+function v3n(v){const d=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);return d<1e-12?[0,0,1]:[v[0]/d,v[1]/d,v[2]/d];}
+function v3d(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+function v3x(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function sph(px,py,cx,cy,r){const x=(px-cx)/r,y=-(py-cy)/r,d2=x*x+y*y;
+  if(d2<=1)return[x,y,Math.sqrt(1-d2)];const d=Math.sqrt(d2);return[x/d,y/d,0];}
+function qi(){return[1,0,0,0];}
+function qm(a,b){return[a[0]*b[0]-a[1]*b[1]-a[2]*b[2]-a[3]*b[3],
+  a[0]*b[1]+a[1]*b[0]+a[2]*b[3]-a[3]*b[2],
+  a[0]*b[2]-a[1]*b[3]+a[2]*b[0]+a[3]*b[1],
+  a[0]*b[3]+a[1]*b[2]-a[2]*b[1]+a[3]*b[0]];}
+function qn(q){const d=Math.sqrt(q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3]);
+  return[q[0]/d,q[1]/d,q[2]/d,q[3]/d];}
+function aqq(ax,a){const s=Math.sin(a/2);return qn([Math.cos(a/2),ax[0]*s,ax[1]*s,ax[2]*s]);}
+function qmat(q){const[w,x,y,z]=q;return[
+  [1-2*(y*y+z*z),2*(x*y-w*z),2*(x*z+w*y)],
+  [2*(x*y+w*z),1-2*(x*x+z*z),2*(y*z-w*x)],
+  [2*(x*z-w*y),2*(y*z+w*x),1-2*(x*x+y*y)]];}
+function pcaq(pts){
+  const n=pts.length;
+  const cx=pts.reduce((s,p)=>s+p[0],0)/n,cy=pts.reduce((s,p)=>s+p[1],0)/n,cz=pts.reduce((s,p)=>s+p[2],0)/n;
+  let Cxx=0,Cyy=0,Czz=0,Cxy=0,Cxz=0,Cyz=0;
+  for(const p of pts){const dx=p[0]-cx,dy=p[1]-cy,dz=p[2]-cz;
+    Cxx+=dx*dx;Cyy+=dy*dy;Czz+=dz*dz;Cxy+=dx*dy;Cxz+=dx*dz;Cyz+=dy*dz;}
+  let v=[1,0.1,0.05];
+  for(let i=0;i<50;i++){
+    const nx=Cxx*v[0]+Cxy*v[1]+Cxz*v[2],ny=Cxy*v[0]+Cyy*v[1]+Cyz*v[2],nz=Cxz*v[0]+Cyz*v[1]+Czz*v[2];
+    v=v3n([nx,ny,nz]);}
+  const ax=v3x(v,[1,0,0]),al=Math.sqrt(ax[0]*ax[0]+ax[1]*ax[1]+ax[2]*ax[2]);
+  if(al<1e-9)return qi();
+  return aqq(v3n(ax),Math.acos(Math.max(-1,Math.min(1,v3d(v,[1,0,0])))));
+}
+
+/* CPK */
+const CPK={H:'#EEEEEE',C:'#888888',N:'#3050F8',O:'#FF0D0D',F:'#90E050',P:'#FF8000',
+  S:'#FFFF30',Cl:'#1FF01F',Br:'#A62929',I:'#940094',Na:'#AB5CF2',Fe:'#E06633',
+  Ca:'#3DFF00',Mg:'#8AFF00',Cu:'#C88033',Zn:'#7D80B0',Au:'#FFD123',Pt:'#D0D0E0'};
+function cpk(s){return CPK[s]||'#FF69B4';}
+function vr(s){return({'H':.31,'C':.77,'N':.75,'O':.73,'F':.72,'P':1.06,'S':1.02,'Cl':.99,'Br':1.14,'I':1.33}[s]||0.9)*0.38;}
+function lc(hex,w,t){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  const t2=w?255:0;return`rgb(${Math.round(r+(t2-r)*t)},${Math.round(g+(t2-g)*t)},${Math.round(b+(t2-b)*t)})`;}
+
+/* VIEWER STATE */
+const VW={q:qi(),zoom:1,atoms:null,drag:false,ls:null};
+const mc=$('molc'),mctx=mc.getContext('2d');
+const ac=$('axisc'),actx=ac.getContext('2d');
+
+function getCvBg(){
+  return getComputedStyle(document.documentElement).getPropertyValue('--cvbg').trim()||'#050709';}
+
+function drawMol(){
+  const W=mc.width,H=mc.height;
+  mctx.clearRect(0,0,W,H);mctx.fillStyle=getCvBg();mctx.fillRect(0,0,W,H);
+  if(!VW.atoms){mctx.fillStyle='#3a4a70';mctx.font='12px DM Mono,monospace';
+    mctx.textAlign='center';mctx.fillText('\u8bf7\u5148\u9009\u62e9\u5206\u5b50\u6587\u4ef6',W/2,H/2);return;}
+  const{symbols,coords,n}=VW.atoms,M=qmat(VW.q);
+  const scale=Math.min(W,H)*0.4*VW.zoom,cx=W/2,cy=H/2;
+  const proj=coords.map(p=>[M[0][0]*p[0]+M[0][1]*p[1]+M[0][2]*p[2],
+    M[1][0]*p[0]+M[1][1]*p[1]+M[1][2]*p[2],M[2][0]*p[0]+M[2][1]*p[1]+M[2][2]*p[2]]);
+  const ord=[...Array(n).keys()].sort((a,b)=>proj[a][2]-proj[b][2]);
+  // bonds
+  mctx.lineWidth=1.2;
+  for(let ii=0;ii<ord.length;ii++){const i=ord[ii];
+    for(let jj=ii+1;jj<ord.length;jj++){const j=ord[jj];
+      const dx=coords[i][0]-coords[j][0],dy=coords[i][1]-coords[j][1],dz=coords[i][2]-coords[j][2];
+      if(Math.sqrt(dx*dx+dy*dy+dz*dz)<(vr(symbols[i])+vr(symbols[j]))/0.38*1.55){
+        mctx.globalAlpha=0.5+0.3*((proj[i][2]+proj[j][2])/2+5)/10;
+        mctx.strokeStyle='#5a6a90';mctx.beginPath();
+        mctx.moveTo(cx+proj[i][0]*scale,cy-proj[i][1]*scale);
+        mctx.lineTo(cx+proj[j][0]*scale,cy-proj[j][1]*scale);mctx.stroke();}}}
+  mctx.globalAlpha=1;
+  // atoms
+  for(const i of ord){
+    const x=cx+proj[i][0]*scale,y=cy-proj[i][1]*scale;
+    const r=Math.max(2,vr(symbols[i])*scale*0.85);
+    const fog=Math.max(0,Math.min(1,(proj[i][2]+5)/10));
+    const col=cpk(symbols[i]);
+    const g=mctx.createRadialGradient(x-r*.3,y-r*.35,r*.1,x,y,r);
+    g.addColorStop(0,lc(col,true,0.55));g.addColorStop(0.5,col);
+    g.addColorStop(1,lc(col,false,0.45*(1-fog*.4)));
+    mctx.globalAlpha=0.6+0.4*fog;mctx.beginPath();mctx.arc(x,y,r,0,Math.PI*2);
+    mctx.fillStyle=g;mctx.fill();
+    mctx.strokeStyle='rgba(0,0,0,.3)';mctx.lineWidth=0.6;mctx.stroke();}
+  mctx.globalAlpha=1;
+  mctx.fillStyle='#3a4a70';mctx.font='9px DM Mono,monospace';mctx.textAlign='left';
+  mctx.fillText(n+' atoms',6,H-6);
+  drawAxis();updHUD();
+}
+function drawAxis(){
+  const W=ac.width,H=ac.height;actx.clearRect(0,0,W,H);
+  const M=qmat(VW.q),cx=W/2,cy=H/2,L=18;
+  [{v:[1,0,0],c:'#ff5f6d',l:'X'},{v:[0,1,0],c:'#4aff8a',l:'Y'},{v:[0,0,1],c:'#4a9eff',l:'Z'}]
+    .map(a=>({...a,px:M[0][0]*a.v[0]+M[0][1]*a.v[1]+M[0][2]*a.v[2],
+      py:M[1][0]*a.v[0]+M[1][1]*a.v[1]+M[1][2]*a.v[2],
+      rz:M[2][0]*a.v[0]+M[2][1]*a.v[1]+M[2][2]*a.v[2]}))
+    .sort((a,b)=>a.rz-b.rz).forEach(a=>{
+      const ex=cx+a.px*L,ey=cy-a.py*L;
+      actx.strokeStyle=a.c;actx.lineWidth=1.5;actx.beginPath();
+      actx.moveTo(cx,cy);actx.lineTo(ex,ey);actx.stroke();
+      actx.fillStyle=a.c;actx.font='8px Syne,sans-serif';actx.textAlign='center';
+      actx.fillText(a.l,ex+(ex-cx)*.3,ey+(ey-cy)*.3+3);});}
+function updHUD(){const M=qmat(VW.q);
+  $('hmx').textContent=M.map(r=>r.map(v=>(v>=0?' ':'')+v.toFixed(3)).join(' ')).join('\n');}
+
+/* MOUSE / WHEEL */
+mc.addEventListener('mousedown',e=>{VW.drag=true;
+  const r=mc.getBoundingClientRect();
+  VW.ls=sph(e.clientX-r.left,e.clientY-r.top,mc.width/2,mc.height/2,Math.min(mc.width,mc.height)*.48);});
+window.addEventListener('mousemove',e=>{
+  if(!VW.drag||!VW.ls)return;
+  const r=mc.getBoundingClientRect();
+  const cur=sph(e.clientX-r.left,e.clientY-r.top,mc.width/2,mc.height/2,Math.min(mc.width,mc.height)*.48);
+  const ax=v3x(VW.ls,cur),al=Math.sqrt(ax[0]*ax[0]+ax[1]*ax[1]+ax[2]*ax[2]);
+  if(al>1e-9){const dot=Math.max(-1,Math.min(1,v3d(VW.ls,cur)));
+    VW.q=qn(qm(aqq(v3n(ax),Math.acos(dot)*2),VW.q));}
+  VW.ls=cur;drawMol();});
+window.addEventListener('mouseup',()=>VW.drag=false);
+mc.addEventListener('wheel',e=>{e.preventDefault();
+  VW.zoom*=e.deltaY>0?.92:1.09;VW.zoom=Math.max(.2,Math.min(8,VW.zoom));drawMol();},{passive:false});
+
+/* KEYBOARD (v-style) */
+const vmodal=$('vmodal');
+window.addEventListener('keydown',e=>{
+  if(!vmodal.classList.contains('open'))return;
+  const deg=(parseFloat($('spdslider').value)||8)*(e.shiftKey?.2:1)*Math.PI/180;
+  let dq=null;
+  if(e.key==='ArrowLeft')dq=aqq([0,1,0],deg);
+  else if(e.key==='ArrowRight')dq=aqq([0,1,0],-deg);
+  else if(e.key==='ArrowUp')dq=aqq([1,0,0],deg);
+  else if(e.key==='ArrowDown')dq=aqq([1,0,0],-deg);
+  else if(e.key==='PageUp')dq=aqq([0,0,1],deg);
+  else if(e.key==='PageDown')dq=aqq([0,0,1],-deg);
+  else if(e.key==='r'||e.key==='R'){VW.q=qi();VW.zoom=1;drawMol();}
+  else if(e.key==='Escape')closeV();
+  if(dq){VW.q=qn(qm(dq,VW.q));drawMol();e.preventDefault();}});
+$('spdslider').addEventListener('input',function(){$('spdval').textContent=this.value+'\u00b0';});
+$('vr').addEventListener('click',()=>{VW.q=qi();VW.zoom=1;drawMol();});
+$('vpca').addEventListener('click',()=>{if(VW.atoms){VW.q=pcaq(VW.atoms.coords);drawMol();toast('PCA \u5bf9\u9f50\u5b8c\u6210');}});
+$('vcl').addEventListener('click',closeV);
+$('vapl').addEventListener('click',applyRot);
+function closeV(){vmodal.classList.remove('open');}
+
+async function openViewer(){
+  if(!S.mol||S.smi){toast('\u8bf7\u5148\u9009\u62e9\u5206\u5b50\u6587\u4ef6','error');return;}
+  vmodal.classList.add('open');$('hmol').textContent=S.mol;
+  try{
+    const res=await fetch('/api/get_xyz',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({file:S.mol})});
+    const d=await res.json();if(!res.ok||d.error){toast('\u52a0\u8f7d\u5931\u8d25','error');return;}
+    const n=d.n,cs=d.coords;
+    const cx=cs.reduce((s,p)=>s+p[0],0)/n,cy2=cs.reduce((s,p)=>s+p[1],0)/n,cz=cs.reduce((s,p)=>s+p[2],0)/n;
+    VW.atoms={symbols:d.symbols,coords:cs.map(p=>[p[0]-cx,p[1]-cy2,p[2]-cz]),n};
+    VW.q=pcaq(VW.atoms.coords);VW.zoom=1;drawMol();
+  }catch(ex){toast('\u52a0\u8f7d\u5931\u8d25\uff1a'+ex.message,'error');}
+}
+async function applyRot(){
+  if(!VW.atoms||!S.mol)return;setStatus('busy','\u5e94\u7528\u65cb\u8f6c');
+  try{
+    const res=await fetch('/api/rotate',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({file:S.mol,matrix:qmat(VW.q)})});
+    const d=await res.json();
+    if(!res.ok||d.error){toast('\u65cb\u8f6c\u5931\u8d25','error');setStatus('error','\u5931\u8d25');return;}
+    toast('\u65cb\u8f6c\u5b8c\u6210 \u2192 '+d.rotated_file);
+    closeV();await loadMols();selMol(d.rotated_file);
+    $('o-nori').checked=true;setStatus('ok','\u65cb\u8f6c\u5b8c\u6210');
+    $('rb').click();
+  }catch(ex){toast('\u9519\u8bef\uff1a'+ex.message,'error');setStatus('error','\u9519\u8bef');}
+}
+
+/* APP STATE */
+const S={mol:null,fmt:'svg',style:'default',hy:'auto',fog:'on',grad:'on',
+  bbe:'auto',bgr:'auto',ghosts:'auto',axes:'auto',hedge:'on',
+  smi:false,lastTemp:null,lastCmd:null};
+
+function toast(msg,t='success'){
+  const e=document.createElement('div');e.className='toast '+t;
+  e.innerHTML='<div class="tdot"></div><span class="tmsg">'+msg+'</span><button class="tcl" onclick="this.parentElement.remove()">\u2715</button>';
+  $('tc').appendChild(e);setTimeout(()=>e.remove(),4000);}
+function setStatus(s,l){$('dot').className='sdot '+s;$('slbl').textContent=l;}
+function setP(p){$('pb2').style.width=p+'%';if(p>=100)setTimeout(()=>setP(0),600);}
+function fmtB(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB';}
+
+function switchTab(id){
+  $a('.ctab').forEach(t=>t.classList.remove('active'));
+  $a('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelector('.ctab[onclick="switchTab(\''+id+'\')"]').classList.add('active');
+  $('tab-'+id).classList.add('active');
+}
+$a('.fmt-tab').forEach(t=>t.addEventListener('click',()=>{
+  $a('.fmt-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');S.fmt=t.dataset.fmt;}));
+$a('.sb').forEach(b=>b.addEventListener('click',()=>{
+  $a('.sb').forEach(x=>x.classList.remove('active'));b.classList.add('active');S.style=b.dataset.style;}));
+$a('.ch').forEach(h=>{const b=$(h.id.replace('ch-','cb-'));
+  if(b)h.addEventListener('click',()=>{h.classList.toggle('open');b.classList.toggle('closed');});});
+function onVdwChange(){$('vdw-extra').style.display=$('o-vdw').checked?'':'none';}
+function setHy(v){S.hy=v;$a('#hy-tri .tbtn').forEach(b=>{b.classList.remove('aon','aoff');
+  if(b.dataset.v===v)b.classList.add(v==='none'?'aoff':'aon');});
+  $('hy-idx-row').style.display=v==='all'?'':'none';}
+function setFog(v){S.fog=v;$a('#fog-tri .tbtn').forEach(b=>{b.classList.remove('aon','aoff');
+  if(b.dataset.v===v)b.classList.add(v==='off'?'aoff':'aon');});}
+function setGrad(v){S.grad=v;$a('#grad-tri .tbtn').forEach(b=>{b.classList.remove('aon','aoff');
+  if(b.dataset.v===v)b.classList.add(v==='off'?'aoff':'aon');});}
+function setBBE(v){S.bbe=v;$a('#bbe-tri .tbtn').forEach(b=>{b.classList.remove('aon','aoff');
+  if(b.dataset.v===v)b.classList.add(v==='off'?'aoff':'aon');});}
+function setBGR(v){S.bgr=v;$a('#bgr-tri .tbtn').forEach(b=>{b.classList.remove('aon','aoff');
+  if(b.dataset.v===v)b.classList.add(v==='off'?'aoff':'aon');});}
+function setGhosts(v){S.ghosts=v;$a('#ghosts-tri .tbtn').forEach(b=>{b.classList.remove('aon','aoff');
+  if(b.dataset.v===v)b.classList.add(v==='off'?'aoff':'aon');});}
+function setAxes(v){S.axes=v;$a('#axes-tri .tbtn').forEach(b=>{b.classList.remove('aon','aoff');
+  if(b.dataset.v===v)b.classList.add(v==='off'?'aoff':'aon');});}
+function setHEdge(v){S.hedge=v;$a('#hedge-tri .tbtn').forEach(b=>{b.classList.remove('aon','aoff');
+  if(b.dataset.v===v)b.classList.add(v==='off'?'aoff':'aon');});}
+function checkGifMx(){$('gif-mx').classList.toggle('show',$('o-gts').checked&&$('o-gtrj').checked);}
+function checkSurfMx(){
+  const mo=$('o-mo').checked,dens=$('o-dens').checked,esp=!!$('o-esp').value,nci=!!$('o-ncisurf').value;
+  $('surf-mx').classList.toggle('show',[mo,dens,esp,nci].filter(Boolean).length>1);
+  $('box-mo').classList.toggle('as',mo&&!dens&&!esp&&!nci);
+  $('box-dens').classList.toggle('as',dens&&!mo&&!esp&&!nci);
+  $('box-esp').classList.toggle('as',esp&&!mo&&!dens&&!nci);
+  $('box-ncisurf').classList.toggle('as',nci&&!mo&&!dens&&!esp);}
+function useSMILES(){const v=$('smi-input').value.trim();if(!v){toast('\u8bf7\u8f93\u5165 SMILES','error');return;}
+  S.mol='__smi__';S.smi=true;$('sn').textContent='SMILES: '+v;$('sn').className='';
+  $('rb').disabled=false;$('ovbtn').disabled=true;toast('\u5df2\u8bbe\u7f6e SMILES \u8f93\u5165');}
+function addHighlight(){const li=$('hl-list');const r=document.createElement('div');r.className='hl-item';
+  r.innerHTML='<input type="text" placeholder="\u539f\u5b50\u8303\u56f4 &quot;1-5,8&quot;"><input type="text" placeholder="\u989c\u8272\uff08\u53ef\u7a7a\uff09" style="width:78px;flex:none;"><button class="dx" onclick="this.parentElement.remove()">\u2715</button>';
+  li.appendChild(r);}
+function getHighlights(){return $a('#hl-list .hl-item').map(r=>{const i=r.querySelectorAll('input');
+  return{atoms:i[0].value.trim(),color:i[1].value.trim()};}).filter(h=>h.atoms);}
+const PRESETS=['default','flat','paton','pmol','skeletal','bubble','tube','wire','graph'];
+function addRegion(){const li=$('reg-list');const r=document.createElement('div');r.className='reg-item';
+  const opts=PRESETS.map(p=>'<option value="'+p+'">'+p+'</option>').join('');
+  r.innerHTML='<div style="display:flex;gap:3px;"><input type="text" placeholder="\u539f\u5b50\u8303\u56f4 1-20"><select style="width:80px;flex:none;appearance:none;background:var(--bg3);border:1px solid var(--bd);color:var(--tx);padding:2px 4px;font-size:10px;">'+opts+'</select></div><button class="dx" onclick="this.parentElement.remove()" style="padding:0 4px;">\u2715</button>';
+  li.appendChild(r);}
+function getRegions(){return $a('#reg-list .reg-item').map(r=>{
+  const i=r.querySelector('input'),s=r.querySelector('select');
+  return{atoms:i?.value.trim(),preset:s?.value};}).filter(r=>r.atoms&&r.preset);}
+
+/* FILE MANAGEMENT */
+async function loadMols(){
+  try{
+    const files=await(await fetch('/api/molecules')).json();
+    const list=$('mol-list');
+    $('o-esp').innerHTML='<option value="">\u2014 \u4e0d\u4f7f\u7528 \u2014</option>';
+    $('o-ncisurf').innerHTML='<option value="">\u2014 \u4e0d\u4f7f\u7528 \u2014</option>';
+    $('o-ovl').innerHTML='<option value="">\u2014 \u4e0d\u4f7f\u7528 \u2014</option>';
+    if(!files.length){list.innerHTML='<div class="empty">\u6682\u65e0\u6587\u4ef6</div>';return;}
+    list.innerHTML='';
+    files.forEach(f=>{
+      const ext=f.suffix.replace('.','');
+      const item=document.createElement('div');item.className='fi'+(S.mol===f.name?' active':'');item.dataset.name=f.name;
+      item.innerHTML='<span class="eb '+ext+'">'+ext+'</span><span class="fn" title="'+f.name+'">'+f.name+'</span><span class="fz">'+fmtB(f.size)+'</span><button class="fdel">\u2715</button>';
+      item.addEventListener('click',e=>{if(!e.target.classList.contains('fdel'))selMol(f.name);});
+      item.querySelector('.fdel').addEventListener('click',e=>{e.stopPropagation();delMol(f.name);});
+      list.appendChild(item);
+      if(ext==='cube'){
+        ['o-esp','o-ncisurf'].forEach(sel=>{const o=document.createElement('option');o.value=f.name;o.textContent=f.name;$(sel).appendChild(o);});}
+      const oo=document.createElement('option');oo.value=f.name;oo.textContent=f.name;$('o-ovl').appendChild(oo);
+    });checkSurfMx();
+  }catch(e){console.error(e);}
+}
+function selMol(name){S.mol=name;S.smi=false;$('sn').textContent=name;$('sn').className='';
+  $a('.fi').forEach(x=>x.classList.toggle('active',x.dataset.name===name));
+  $('rb').disabled=false;$('ovbtn').disabled=false;}
+async function delMol(name){
+  if(!confirm('\u5220\u9664 '+name+'?'))return;
+  const r=await(await fetch('/api/delete_molecule',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})})).json();
+  if(r.ok){if(S.mol===name){S.mol=null;S.smi=false;$('sn').textContent='\u5c1a\u672a\u9009\u62e9';$('sn').className='none';
+    $('rb').disabled=true;$('ovbtn').disabled=true;}loadMols();toast('\u5df2\u5220\u9664 '+name);}}
+
+/* TEMP GALLERY */
+async function loadTemp(){
+  try{
+    const figs=await(await fetch('/api/temp_figures')).json();
+    const g=$('tgal');
+    if(!figs.length){g.innerHTML='<div class="empty">TEMP \u4e3a\u7a7a</div>';return;}
+    g.innerHTML='';
+    figs.forEach(f=>{
+      const ext=f.suffix.replace('.','');const item=document.createElement('div');
+      item.className='gi'+(S.lastTemp===f.name?' active':'');item.dataset.name=f.name;
+      item.innerHTML='<span class="gb">'+ext+'</span><span class="gin" title="'+f.name+'">'+f.name+'</span><button class="gsv" title="\u4fdd\u5b58\u5230 FIGURE">\u2b06</button><button class="gid" title="\u5220\u9664">\u2715</button>';
+      item.addEventListener('click',e=>{if(!e.target.classList.contains('gsv')&&!e.target.classList.contains('gid'))prevTemp(f.name);});
+      item.querySelector('.gsv').addEventListener('click',e=>{e.stopPropagation();saveToFig(f.name);});
+      item.querySelector('.gid').addEventListener('click',e=>{e.stopPropagation();delTemp(f.name);});
+      g.appendChild(item);
+    });
+  }catch(e){console.error(e);}
+}
+async function delTemp(name){
+  const r=await(await fetch('/api/delete_temp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})})).json();
+  if(r.ok){if(S.lastTemp===name){S.lastTemp=null;clearPrev();}loadTemp();}
+}
+async function clearTemp(){
+  if(!confirm('\u6e05\u7a7a\u6240\u6709 TEMP \u9884\u89c8\u6587\u4ef6\uff1f'))return;
+  await fetch('/api/clear_temp',{method:'POST'});clearPrev();loadTemp();toast('TEMP \u5df2\u6e05\u7a7a');}
+
+/* FIGURE GALLERY */
+async function loadFigs(){
+  try{
+    const figs=await(await fetch('/api/figures')).json();const g=$('fgal');
+    if(!figs.length){g.innerHTML='<div class="empty">FIGURE \u4e3a\u7a7a</div>';return;}
+    g.innerHTML='';
+    figs.forEach(f=>{
+      const ext=f.suffix.replace('.','');const item=document.createElement('div');item.className='gi';item.dataset.name=f.name;
+      item.innerHTML='<span class="gb sv">'+ext+'</span><span class="gin" title="'+f.name+'">'+f.name+'</span><a href="/figures/'+encodeURIComponent(f.name)+'" download class="gsv" title="\u4e0b\u8f7d">\u2b07</a><button class="gid" title="\u5220\u9664">\u2715</button>';
+      item.addEventListener('click',e=>{if(!e.target.classList.contains('gid')&&e.target.tagName!=='A')prevFig(f.name);});
+      item.querySelector('.gid').addEventListener('click',e=>{e.stopPropagation();delFig(f.name);});
+      g.appendChild(item);
+    });
+  }catch(e){console.error(e);}
+}
+async function delFig(name){
+  const r=await(await fetch('/api/delete_figure',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})})).json();
+  if(r.ok){loadFigs();toast('\u5df2\u5220\u9664 '+name);}}
+
+async function saveToFig(name){
+  const r=await(await fetch('/api/save_figure',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})})).json();
+  if(r.ok){loadFigs();toast('\u5df2\u4fdd\u5b58 '+r.saved+' \u5230 FIGURE');}
+  else toast('\u4fdd\u5b58\u5931\u8d25','error');}
+async function saveCurrentToFig(){
+  if(!S.lastTemp){toast('\u8bf7\u5148\u5728 TEMP \u4e2d\u9009\u62e9\u9884\u89c8\u6587\u4ef6','error');return;}
+  await saveToFig(S.lastTemp);}
+async function saveAllToFig(){
+  const figs=await(await fetch('/api/temp_figures')).json();
+  if(!figs.length){toast('TEMP \u4e3a\u7a7a','error');return;}
+  let ok=0;
+  for(const f of figs){const r=await(await fetch('/api/save_figure',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name})})).json();if(r.ok)ok++;}
+  loadFigs();toast('\u5df2\u4fdd\u5b58 '+ok+' \u4e2a\u6587\u4ef6\u5230 FIGURE');}
+
+/* PREVIEW */
+async function prevTemp(name){
+  S.lastTemp=name;const url='/temp/'+encodeURIComponent(name);const ext=name.split('.').pop().toLowerCase();
+  $a('.gi').forEach(x=>x.classList.toggle('active',x.dataset.name===name));
+  $('pfn').textContent=name;$('dl').href=url;$('dl').download=name;
+  $('dl').style.display='';$('savebtn').style.display='';$('fsbtn').style.display='';
+  $('pph').style.display='none';$('pimg').style.display='none';$('psvg').style.display='none';
+  if(ext==='svg'){try{const txt=await(await fetch(url)).text();const c=$('psvg');c.innerHTML=txt;
+    const s=c.querySelector('svg');if(s){s.style.maxWidth='100%';s.style.maxHeight='95%';}c.style.display='block';}
+    catch{showImg(url);}}
+  else if(['png','gif'].includes(ext)){showImg(url);}
+  else{$('pph').innerHTML='<p style="color:var(--tx);">'+name+'</p><p class="hint">PDF \u2014 \u8bf7\u4e0b\u8f7d</p>';$('pph').style.display='';}}
+async function prevFig(name){
+  const url='/figures/'+encodeURIComponent(name);const ext=name.split('.').pop().toLowerCase();
+  $('pfn').textContent=name+' [\u5df2\u4fdd\u5b58]';$('dl').href=url;$('dl').download=name;
+  $('dl').style.display='';$('savebtn').style.display='none';$('fsbtn').style.display='';
+  $('pph').style.display='none';$('pimg').style.display='none';$('psvg').style.display='none';
+  if(ext==='svg'){try{const txt=await(await fetch(url)).text();const c=$('psvg');c.innerHTML=txt;
+    const s=c.querySelector('svg');if(s){s.style.maxWidth='100%';s.style.maxHeight='95%';}c.style.display='block';}
+    catch{showImg(url);}}
+  else if(['png','gif'].includes(ext)){showImg(url);}
+  else{$('pph').innerHTML='<p>'+name+'</p>';$('pph').style.display='';}}
+function showImg(url){const i=$('pimg');i.src=url+'?t='+Date.now();i.style.display='block';}
+function clearPrev(){
+  $('pimg').style.display='none';$('psvg').style.display='none';
+  $('pph').innerHTML='<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg><p>\u9009\u62e9\u6587\u4ef6 \u2192 \u70b9\u51fb \u25b6 \u6e32\u67d3\u9884\u89c8</p><p class="hint">\u6e32\u67d3\u5230 TEMP/\uff0c\u70b9\u51fb \u2b06 \u4fdd\u5b58\u5230 FIGURE/</p>';
+  $('pph').style.display='';$('pfn').textContent='\u5c1a\u65e0\u7ed3\u679c';
+  $('dl').style.display='none';$('savebtn').style.display='none';
+  $('fsbtn').style.display='none';$('cpcmd').style.display='none';}
+
+/* RENDER */
+$('rb').addEventListener('click',async()=>{
+  if(!S.mol&&!S.smi)return;
+  const btn=$('rb'),log=$('log');
+  const cj=$('o-json').value.trim();
+  if(cj){try{JSON.parse(cj);}catch{toast('JSON \u683c\u5f0f\u9519\u8bef','error');return;}}
+  if($('o-gts').checked&&$('o-gtrj').checked){toast('--gif-ts \u4e0e --gif-trj \u4e92\u65a5','error');return;}
+  const p={
+    file:S.smi?'':S.mol,format:S.fmt,style:S.style,
+    smi:S.smi?$('smi-input').value.trim():'',
+    mol_frame:$('o-molfr').value,rebuild:$('o-rebuild').checked,threshold:$('o-thresh').value,
+    charge:$('o-chg').value,multiplicity:$('o-mult').value,
+    canvas_size:$('o-cs').value,atom_scale:$('o-as').value,bond_width:$('o-bw').value,
+    atom_stroke_width:$('o-asw').value,bond_color:$('o-bc').value,
+    bg_color:$('o-bg').value,transparent:$('o-transp').checked,
+    fog:S.fog==='on'?true:S.fog==='off'?false:null,fog_strength:$('o-fog-s').value,
+    gradient:S.grad==='on'?true:S.grad==='off'?false:null,gradient_strength:$('o-grad-s').value,
+    vdw_opacity:$('o-vdw-op').value,vdw_scale:$('o-vdw-sc').value,vdw_gradient:$('o-vdw-gr').value,
+    dpi:$('o-dpi').value,
+    bond_by_element:S.bbe==='on'?true:S.bbe==='off'?false:null,
+    bond_gradient:S.bgr==='on'?true:S.bgr==='off'?false:null,
+    bond_cutoff:$('o-bcut').value,no_bonds:$('o-nobonds').checked,
+    ts_color:$('o-tscol').value,nci_color:$('o-ncicol').value,
+    hydrogens:S.hy==='all',no_hy:S.hy==='none',hy_indices:S.hy==='all'?$('o-hy-idx').value:'',
+    bond_orders:$('o-bo').checked?null:false,kekule:$('o-kek').checked,
+    vdw:$('o-vdw').checked?($('o-vdw-r').value||''):null,
+    dof:$('o-dof').checked,dof_strength:$('o-dof-s').value,
+    mol_color:$('o-molcol').value,highlights:getHighlights(),
+    idx:$('o-idx').value,stereo:$('o-stereo').checked,stereo_style:$('o-stereo-style').value,
+    annotations:$('o-annot').value,label_size:$('o-lsize').value,
+    cmap_data:$('o-cmap').value.trim(),cmap_range:$('o-cmrng').value,
+    cmap_symm:$('o-cmsymm').checked,cmap_palette:$('o-cmpal').value,cbar:$('o-cbar').checked,
+    no_orient:$('o-nori').checked,
+    ts:$('o-ts').checked,ts_frame:$('o-tsf').value,ts_bond:$('o-tsb').value,
+    nci:$('o-nci').checked,nci_bond:$('o-ncib').value,
+    surface_style:$('o-surf-style').value,iso:$('o-iso').value,opacity:$('o-opac').value,
+    mo:$('o-mo').checked,mo_pos_color:$('o-mop').value,mo_neg_color:$('o-mon').value,
+    flat_mo:$('o-flatmo').checked,mo_blur:$('o-moblur').value,mo_upsample:$('o-moup').value,
+    dens:$('o-dens').checked,dens_color:$('o-dcol').value,
+    esp_file:$('o-esp').value,nci_surf_file:$('o-ncisurf').value,
+    nci_mode:$('o-ncimode').value,nci_cutoff:$('o-ncicut').value,
+    hull:$('o-hull').value,hull_color:$('o-hcol').value,hull_opacity:$('o-hop').value,
+    hull_edge:S.hedge==='on'?null:false,hull_edge_ratio:$('o-heratio').value,
+    overlay_file:$('o-ovl').value,overlay_color:$('o-ovlcol').value,
+    ensemble:$('o-ens').checked,ensemble_color:$('o-enscol').value,
+    align_atoms:$('o-align').value,conf_opacity:$('o-ensop').value,regions:getRegions(),
+    gif_rot:$('o-grot').value,gif_ts:$('o-gts').checked,gif_trj:$('o-gtrj').checked,
+    gif_diffuse:$('o-gdiff').checked,gif_fps:$('o-gfps').value,rot_frames:$('o-rfrm').value,
+    crystal:$('o-cryst').value==='auto'?'crystal':$('o-cryst').value,
+    cell:$('o-cell').checked,no_cell:$('o-nocell').checked,
+    cell_color:$('o-cellcol').value,cell_width:$('o-cellw').value,
+    ghosts:S.ghosts==='on'?true:S.ghosts==='off'?false:null,ghost_opacity:$('o-ghostop').value,
+    axes:S.axes==='on'?true:S.axes==='off'?false:null,axis:$('o-axis').value,supercell:$('o-super').value,
+    custom_json:cj,
+  };
+  btn.disabled=true;btn.classList.add('loading');btn.querySelector('.bt').textContent='\u6e32\u67d3\u4e2d\u2026';
+  setStatus('busy','\u6e32\u67d3\u4e2d');setP(20);log.className='log v';log.textContent='\u2192 \u8c03\u7528 xyzrender\u2026';
+  try{
+    const res=await fetch('/api/render',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    setP(70);const d=await res.json();
+    if(!res.ok||d.error){
+      log.textContent='\u2717 \u9519\u8bef:\n'+(d.error||'\u672a\u77e5');log.className='log v err';
+      setStatus('error','\u5931\u8d25');toast('\u6e32\u67d3\u5931\u8d25\uff1a'+(d.error||'').split('\n')[0],'error');
+    }else{
+      S.lastCmd=d.cmd;S.lastTemp=d.output;
+      log.textContent='\u2713 \u6210\u529f\uff01\n$ '+d.cmd;log.className='log v ok';
+      setStatus('ok','\u5b8c\u6210');setP(100);
+      toast('\u9884\u89c8\u5df2\u4fdd\u5b58\u5230 TEMP/'+d.output);
+      $('cpcmd').style.display='';await loadTemp();await prevTemp(d.output);}
+  }catch(e){
+    log.textContent='\u2717 \u9519\u8bef\uff1a'+e.message;log.className='log v err';
+    setStatus('error','\u9519\u8bef');setP(0);toast('\u8bf7\u6c42\u5931\u8d25','error');}
+  finally{btn.disabled=false;btn.classList.remove('loading');btn.querySelector('.bt').textContent='\u25b6 \u6e32\u67d3\u9884\u89c8';}
+});
+
+$('cpcmd').addEventListener('click',()=>{
+  if(S.lastCmd)navigator.clipboard.writeText(S.lastCmd).then(()=>toast('\u547d\u4ee4\u5df2\u590d\u5236'));});
+$('fsbtn').addEventListener('click',()=>{const v=$('vp');if(v.requestFullscreen)v.requestFullscreen();});
+$('rfg').addEventListener('click',loadFigs);
+
+/* UPLOAD */
+async function uploadFiles(files){
+  let ok=0;
+  for(const f of files){
+    const fd=new FormData();fd.append('file',f);
+    try{const r=await(await fetch('/api/upload',{method:'POST',body:fd})).json();
+      if(r.ok){ok++;toast('\u5df2\u4e0a\u4f20 '+f.name);}else toast('\u5931\u8d25\uff1a'+r.error,'error');
+    }catch{toast('\u9519\u8bef\uff1a'+f.name,'error');}}
+  if(ok)await loadMols();}
+$('fi').addEventListener('change',e=>uploadFiles([...e.target.files]));
+const dz=$('dz');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('dragover');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');uploadFiles([...e.dataTransfer.files]);});
+
+/* INIT */
+(async()=>{await loadMols();await loadTemp();await loadFigs();setStatus('ok','\u5c31\u7eea');})();
+
+</script>
+</body>
+</html>

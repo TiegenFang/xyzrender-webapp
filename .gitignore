@@ -1,0 +1,8 @@
+﻿FIGURE/*
+!FIGURE/.gitkeep
+__pycache__/
+*.pyc
+.venv/
+venv/
+tmp_config.json
+.DS_Store
