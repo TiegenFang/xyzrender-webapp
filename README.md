@@ -34,7 +34,7 @@ pip install --upgrade git+https://github.com/aligfellow/xyzrender.git
 > pip install xyzrender[crystal]  # VASP/QE periodic structures (phonopy)
 > pip install xyzrender[smi]      # SMILES input (rdkit)
 > pip install xyzrender[cif]      # CIF input (ase)
-> pip install xyzrender[all]      # everything above
+> pip install xyzrender[all]      # everything above【这里最好不要，因为vmol不支持win版本，可能会出现报错】
 > ```
 
 ### 2. 启动应用
