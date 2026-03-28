@@ -63,19 +63,179 @@ def _parse_xyz(path):
     return s,np.array(c,dtype=float),comment
 
 def _load_coords(path):
-    if path.suffix.lower()==".xyz": return _parse_xyz(path)
+    """
+    Parse any supported molecular file and return (symbols, coords, comment).
+    Fallback chain:
+      1. .xyz  → built-in fast parser
+      2. xyzrender.io.load_molecule  (mol/sdf/mol2/pdb/out/log/cube …)
+      3. cclib   (ORCA/Gaussian/Q-Chem output files)
+      4. ase     (pdb/cif/vasp/xyz/mol/… — very broad coverage)
+      5. built-in PDB parser (ATOM/HETATM lines)
+      6. built-in mmCIF parser (_atom_site table)
+    """
+    ext = path.suffix.lower()
+
+    # ── 1. XYZ ────────────────────────────────────────────────────────────────
+    if ext == ".xyz":
+        return _parse_xyz(path)
+
+    # ── 2. xyzrender native loader (mol/sdf/mol2/pdb/cube/qm output …) ───────
     try:
         from xyzrender.io import load_molecule
-        g=load_molecule(str(path)); nodes=sorted(g.nodes)
-        return [g.nodes[i]["symbol"] for i in nodes],\
-               np.array([list(g.nodes[i]["position"]) for i in nodes],dtype=float),\
-               path.stem
-    except Exception: pass
+        g = load_molecule(str(path))
+        nodes = sorted(g.nodes)
+        symbols = [g.nodes[i]["symbol"] for i in nodes]
+        coords  = np.array([list(g.nodes[i]["position"]) for i in nodes], dtype=float)
+        return symbols, coords, path.stem
+    except Exception:
+        pass
+
+    # ── 3. cclib (QM output: ORCA, Gaussian, Q-Chem, …) ──────────────────────
     try:
-        import cclib; data=cclib.io.ccread(str(path))
-        from cclib.parser.utils import PeriodicTable; pt=PeriodicTable()
-        return [pt.element[z] for z in data.atomnos],np.array(data.atomcoords[-1],dtype=float),path.stem
-    except Exception as e: raise ValueError(f"Cannot parse {path.name}: {e}") from e
+        import cclib
+        data = cclib.io.ccread(str(path))
+        if data is not None and hasattr(data, "atomnos") and hasattr(data, "atomcoords"):
+            from cclib.parser.utils import PeriodicTable
+            pt = PeriodicTable()
+            symbols = [pt.element[z] for z in data.atomnos]
+            coords  = np.array(data.atomcoords[-1], dtype=float)
+            return symbols, coords, path.stem
+    except Exception:
+        pass
+
+    # ── 4. ase (pdb / cif / vasp / extxyz / mol …) ───────────────────────────
+    try:
+        from ase.io import read as ase_read
+        atoms = ase_read(str(path))
+        symbols = list(atoms.get_chemical_symbols())
+        coords  = atoms.get_positions().tolist()
+        return symbols, np.array(coords, dtype=float), path.stem
+    except Exception:
+        pass
+
+    # ── 5. Built-in PDB parser (ATOM / HETATM records) ───────────────────────
+    if ext in (".pdb", ".ent"):
+        try:
+            symbols, coords = [], []
+            ELEM_COL = slice(76, 78)   # columns 77-78 in PDB standard
+            for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+                if not line.startswith(("ATOM  ", "HETATM")):
+                    continue
+                x = float(line[30:38]); y = float(line[38:46]); z = float(line[46:54])
+                elem = line[ELEM_COL].strip()
+                if not elem:               # fall back to atom name column
+                    elem = line[12:16].strip().lstrip("0123456789")[:2].capitalize()
+                symbols.append(elem); coords.append([x, y, z])
+            if symbols:
+                return symbols, np.array(coords, dtype=float), path.stem
+        except Exception:
+            pass
+
+    # ── 6. Built-in mmCIF / CIF parser (_atom_site) ───────────────────────────
+    if ext in (".cif", ".mmcif"):
+        try:
+            symbols, coords = _parse_cif_coords(path)
+            if symbols:
+                return symbols, np.array(coords, dtype=float), path.stem
+        except Exception:
+            pass
+
+    # ── 7. SDF / MOL fallback (V2000 / V3000) ────────────────────────────────
+    if ext in (".mol", ".sdf", ".mol2"):
+        try:
+            symbols, coords = _parse_mol_coords(path)
+            if symbols:
+                return symbols, np.array(coords, dtype=float), path.stem
+        except Exception:
+            pass
+
+    raise ValueError(f"无法解析 {path.name}。支持: xyz/pdb/cif/mol/sdf/mol2/cube/out/log 等。")
+
+
+def _parse_cif_coords(path):
+    """Minimal _atom_site block reader for CIF files."""
+    import re
+    text = path.read_text(encoding="utf-8", errors="replace")
+    # Find _atom_site loop block
+    # Collect column headers
+    in_loop = False; headers = []; data_lines = []
+    for line in text.splitlines():
+        s = line.strip()
+        if s.lower().startswith("loop_"):
+            in_loop = True; headers = []; data_lines = []
+            continue
+        if in_loop:
+            if s.startswith("_atom_site"):
+                headers.append(s.lower()); continue
+            if headers and not s.startswith("_") and s and not s.startswith("#"):
+                if s.startswith("loop_"):
+                    break
+                data_lines.append(s)
+            elif headers and (s.startswith("_") or s.startswith("loop_")):
+                if data_lines: break
+    if not headers or not data_lines:
+        return [], []
+    # Identify column indices
+    def ci(name):
+        candidates = [i for i,h in enumerate(headers) if name in h]
+        return candidates[0] if candidates else None
+    ix = ci("type_symbol") or ci("label_atom_id")
+    fx = ci("fract_x") or ci("cartn_x")
+    fy = ci("fract_y") or ci("cartn_y")
+    fz = ci("fract_z") or ci("cartn_z")
+    use_fract = "fract" in (headers[fx] if fx is not None else "")
+    if ix is None or fx is None or fy is None or fz is None:
+        return [], []
+    # Parse lattice for fractional→Cartesian
+    a_param = re.search(r"_cell_length_a\s+([\d.]+)", text)
+    b_param = re.search(r"_cell_length_b\s+([\d.]+)", text)
+    c_param = re.search(r"_cell_length_c\s+([\d.]+)", text)
+    al_param = re.search(r"_cell_angle_alpha\s+([\d.]+)", text)
+    be_param = re.search(r"_cell_angle_beta\s+([\d.]+)", text)
+    ga_param = re.search(r"_cell_angle_gamma\s+([\d.]+)", text)
+    if use_fract and a_param:
+        a,b,c = float(a_param.group(1)),float(b_param.group(1)),float(c_param.group(1))
+        al=math.radians(float(al_param.group(1))); be=math.radians(float(be_param.group(1))); ga=math.radians(float(ga_param.group(1)))
+        # Build direct lattice matrix
+        cx=math.cos(ga); sx=math.sin(ga)
+        cy=(math.cos(al)-math.cos(be)*cx)/sx
+        cz=math.sqrt(max(0,1-math.cos(be)**2-cy**2))
+        M=np.array([[a,b*cx,c*math.cos(be)],[0,b*sx,c*cy],[0,0,c*cz]])
+    else:
+        M = None
+    symbols, coords = [], []
+    for line in data_lines:
+        parts = line.split()
+        if max(ix,fx,fy,fz) >= len(parts): continue
+        sym = re.sub(r"[^A-Za-z]","",parts[ix])[:2].capitalize()
+        if not sym: continue
+        try:
+            x,y,z = float(parts[fx].split("(")[0]),float(parts[fy].split("(")[0]),float(parts[fz].split("(")[0])
+        except ValueError: continue
+        if use_fract and M is not None:
+            xyz = M @ np.array([x,y,z])
+            x,y,z = float(xyz[0]),float(xyz[1]),float(xyz[2])
+        symbols.append(sym); coords.append([x,y,z])
+    return symbols, coords
+
+
+def _parse_mol_coords(path):
+    """Parse V2000 MOL/SDF atom block."""
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    symbols, coords = [], []
+    # Header: line 4 is counts line in V2000
+    try:
+        counts = lines[3]
+        n_atoms = int(counts[0:3])
+        for line in lines[4:4+n_atoms]:
+            parts = line.split()
+            if len(parts) >= 4:
+                x,y,z = float(parts[0]),float(parts[1]),float(parts[2])
+                sym = parts[3].capitalize()
+                symbols.append(sym); coords.append([x,y,z])
+    except Exception:
+        pass
+    return symbols, coords
 
 def _write_xyz(path,symbols,coords,comment="rotated"):
     lines=[str(len(symbols)),comment]
