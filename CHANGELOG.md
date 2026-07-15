@@ -305,3 +305,33 @@ This append-only file records user-requested changes made to this project.
   - git diff --check: passed
   - In-app browser: four-stage compute workflow visible, structure/ORCA selection reaches script generation, no console errors
   - No external Multiwfn, Gaussian, ORCA, or formchk process was executed
+
+## 2026-07-15 19:18:51+08:00
+
+- Request: 将 XYZRender Workstation 更新为 1.0.0 正式版，移除 V1 标识，重建并发布 Windows 安装器和便携版
+- Status: Completed
+- Changes:
+  - 将应用、Python 包和 Inno Setup 版本统一升级为 1.0.0，并移除页面及启动信息中的 V1 标识
+  - 重新构建 PyInstaller onedir 程序与 Inno Setup 安装器，生成完整便携版 ZIP 和 SHA-256 校验文件
+  - 将正式版源码推送到 TiegenFang/xyzrender-webapp，并发布 v1.0.0 GitHub Release 的三个资产
+- Files:
+  - `.gitignore`
+  - `pyproject.toml`
+  - `src/xyzrender_workstation/__init__.py`
+  - `src/xyzrender_workstation/web/app.py`
+  - `src/xyzrender_workstation/web/templates/index.html`
+  - `src/xyzrender_workstation/web/static/pretty_lattice_refresh.css`
+  - `scripts/build_html.py`
+  - `desktop/installer.iss`
+  - `desktop/BUILD.md`
+  - `README.md`
+  - `tests/test_flask_compat.py`
+  - `dist/XYZRender-Workstation-1.0.0-Portable.zip`
+  - `dist/installer/XYZRender-Workstation-1.0.0-Setup.exe`
+  - `dist/SHA256SUMS-1.0.0.txt`
+- Verification:
+  - python -m pytest -q: 44 passed
+  - PyInstaller and Inno Setup 6.7.3 build: succeeded
+  - Frozen desktop --self-test: exit 0; SVG, PNG, PDF, GIF, upload and save checks passed
+  - GitHub Release v1.0.0: published, not draft/prerelease; all three assets uploaded
+  - Remote main matched local commit 175cea50fe2fbe5819a9ab4a36a1decd677b7b9c before the release-log commit
