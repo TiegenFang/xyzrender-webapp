@@ -182,3 +182,21 @@ This append-only file records user-requested changes made to this project.
   - Program Files 实装验收：运行前后安装目录文件数不变，用户数据写入外部目录
   - 覆盖升级和卸载验收：用户图稿哈希不变，卸载后图稿与日志保留
   - Inno Setup 6.7.3 编译成功；安装器版本 0.2.0，84.0 MB，SHA256 69FC555E2CC3D8417DD570E09607B38323399B0C1EB7112379D2C2C455F58A82
+
+## 2026-07-15 15:47:45+08:00
+
+- Request: Publish the current web application source and Windows installer to TiegenFang/xyzrender-webapp
+- Status: Completed
+- Changes:
+  - Connected the local project to the existing public GitHub repository while preserving its main-branch history, then published the refactored Flask web application and reproducible desktop packaging sources.
+  - Excluded generated builds, runtime output, reference projects, and third-party software from Git; removed obsolete generated previews and legacy flat-template files from the repository.
+  - Updated README publishing guidance and created GitHub Release v0.2.0 with the Windows installer asset.
+- Files:
+  - `.gitignore`
+  - `README.md`
+  - `TEMP/.gitkeep`
+  - `FIGURE/.gitkeep`
+- Verification:
+  - python -m pytest -q: 25 passed
+  - Remote main matched local source commit 61042bc6382ecac74bb83af0de16fb0e2ab75a2e before the release-log follow-up commit
+  - GitHub Release v0.2.0 asset uploaded: 88,111,234 bytes; SHA256 69FC555E2CC3D8417DD570E09607B38323399B0C1EB7112379D2C2C455F58A82
