@@ -15,7 +15,7 @@ Install Python 3.10+ x64 and Inno Setup 6, then run from PowerShell:
 The script produces:
 
 - `dist\XYZRender Workstation\` — PyInstaller **onedir** program directory.
-- `dist\installer\XYZRender-Workstation-0.2.0-Setup.exe` — Inno Setup installer.
+- `dist\installer\XYZRender-Workstation-1.0.0-Setup.exe` — Inno Setup installer.
 
 Use `-SkipInstall` after dependencies are installed, or `-SkipInstaller` when only
 the onedir output is needed.

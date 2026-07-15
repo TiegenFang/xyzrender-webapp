@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>XYZRender Workstation V1</title>
+<title>XYZRender Workstation</title>
 <style>
 :root,[data-theme="dark"]{
   --bg:#07090f;--bg2:#0d1018;--bg3:#131722;--bg4:#1a2030;
@@ -86,6 +86,17 @@ html,body{height:100%;background:var(--bg);color:var(--tx);
 .ctab.active{color:var(--teal);background:var(--bg2);border-bottom-color:var(--teal);}
 .tab-pane{display:none;overflow-y:auto;padding:8px;height:100%;}
 .tab-pane.active{display:block;}
+.mw-card{border:1px solid var(--bd);border-radius:6px;background:var(--bg2);padding:7px;margin-bottom:7px;}
+.mw-title{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:var(--tx);margin-bottom:5px;}
+.mw-task{display:grid;grid-template-columns:18px 72px 1fr;gap:4px;align-items:center;padding:3px 0;border-bottom:1px solid var(--bd);}
+.mw-task:last-child{border-bottom:none}.mw-task input[type=checkbox]{accent-color:var(--teal)}
+.mw-task input[type=text],.mw-card input[type=text],.mw-card input[type=number],.mw-card select{width:100%;background:var(--bg3);border:1px solid var(--bd);border-radius:4px;color:var(--tx);font:inherit;font-size:9px;padding:4px;outline:none;}
+.mw-actions{display:flex;gap:5px;margin-top:6px}.mw-actions button{flex:1;padding:6px;border-radius:4px;border:1px solid var(--td);background:var(--tbg);color:var(--teal);font:inherit;font-size:9px;font-weight:700;cursor:pointer;}
+.mw-actions button.secondary{border-color:var(--bd2);background:var(--bg3);color:var(--txm)}
+.mw-drop{display:block;border:1px dashed var(--bd2);border-radius:5px;padding:9px;text-align:center;color:var(--txm);cursor:pointer;font-size:9px;}
+.mw-job{border-left:2px solid var(--td);padding:5px 6px;margin:5px 0;background:var(--bg3);font-size:9px}.mw-job.warning{border-color:var(--amber)}.mw-job.invalid{border-color:var(--red)}
+.mw-job-head{display:flex;justify-content:space-between;gap:5px}.mw-job small{color:var(--txm)}
+.mw-artifact{display:flex;gap:4px;align-items:center;padding:2px 0;color:var(--txm)}.mw-artifact span:first-child{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* FILE LIST */
 .fl{display:flex;flex-direction:column;gap:2px;}
@@ -350,7 +361,7 @@ input[type=file]{display:none;}
 <body>
 <div id="pb2"></div>
 <header id="topbar">
-  <div class="logo">XYZ<span>Render</span></div><span class="release-label">V1</span>
+  <div class="logo">XYZ<span>Render</span></div>
   <div class="tagline">科研图稿工作台</div>
   <div class="workflow" aria-label="工作流程">
     <span><b>1</b> 选择结构</span><i>→</i><span><b>2</b> 调整外观</span><i>→</i><span><b>3</b> 导出图稿</span>
@@ -397,6 +408,7 @@ input[type=file]{display:none;}
     <button class="ctab" onclick="switchTab('display')">显示</button>
     <button class="ctab" onclick="switchTab('color')">着色</button>
     <button class="ctab" onclick="switchTab('surface')">表面</button>
+    <button class="ctab" onclick="switchTab('compute')">计算</button>
     <button class="ctab" onclick="switchTab('overlay')">叠加</button>
     <button class="ctab" onclick="switchTab('gif')">GIF</button>
     <button class="ctab" onclick="switchTab('crystal')">晶体</button>
@@ -586,6 +598,53 @@ input[type=file]{display:none;}
       <div class="tg"><input type="checkbox" id="o-cbar"><div class="tt"><div class="tk"></div></div></div>
     </div>
 
+  </div>
+  <div class="tab-pane" id="tab-compute">
+    <div class="context-note">只生成可审阅的计算脚本；量化计算与 Multiwfn 分析均由用户在外部运行。</div>
+    <div class="mw-card">
+      <div class="mw-title">1 · Multiwfn 工具路径</div>
+      <div class="fr"><label>Multiwfn.exe</label><input id="mw-exe" type="text" placeholder="E:\Multiwfn\Multiwfn.exe"></div>
+      <div id="mw-exe-status" style="font-size:8.5px;color:var(--txm);">尚未配置；路径会写入生成的 Windows 分析脚本。</div>
+      <div class="mw-actions"><button type="button" onclick="saveMwSettings()">保存路径</button></div>
+    </div>
+    <div class="mw-card">
+      <div class="mw-title">2 · 从结构准备波函数计算脚本</div>
+      <div class="fr"><label>结构文件</label><select id="mw-structure-select"><option value="">— 选择 XYZ/MOL/PDB 等结构 —</option></select></div>
+      <div class="fr"><label>计算引擎</label><select id="mw-engine"><option value="gaussian">Gaussian → FCHK</option><option value="orca">ORCA → Molden</option></select></div>
+      <div class="fr"><label>泛函</label><input id="mw-functional" type="text" value="B3LYP" placeholder="B3LYP"></div>
+      <div class="fr"><label>基组</label><input id="mw-basis" type="text" value="6-31G(d)" placeholder="def2-TZVP"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;"><div class="fr"><label>电荷</label><input id="mw-qcharge" type="number" value="0"></div><div class="fr"><label>多重度</label><input id="mw-qmult" type="number" min="1" value="1"></div></div>
+      <div style="display:flex;gap:12px;padding:4px 0;font-size:9px;"><label><input type="checkbox" id="mw-opt" checked> 几何优化</label><label><input type="checkbox" id="mw-freq"> 频率计算</label></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;"><div class="fr"><label>核心数</label><input id="mw-cores" type="number" min="1" value="8"></div><div class="fr"><label>内存</label><input id="mw-memory" type="text" value="8GB"></div></div>
+      <div class="mw-actions"><button type="button" onclick="generateCalculationPackage()">生成计算脚本 ZIP</button></div>
+      <div style="font-size:8px;color:var(--txm);margin-top:4px;">Gaussian 包会调用 formchk 生成 FCHK；ORCA 包会调用 orca_2mkl 生成 Molden 文件。</div>
+    </div>
+    <div class="mw-card">
+      <div class="mw-title">3 · 基于返回波函数生成 Multiwfn 分析脚本</div>
+      <div class="fr"><label>已上传</label><select id="mw-source-select"><option value="">— 选择波函数文件 —</option></select></div>
+      <div class="fr"><label>或仅引用</label><input id="mw-source-name" type="text" placeholder="molecule.fchk"></div>
+      <div class="fr"><label>模板</label><select id="mw-profile"><option value="multiwfn-2026.4.10">Multiwfn 2026.4.10</option></select></div>
+      <div id="mw-source-info" style="font-size:8.5px;color:var(--txm);margin-top:4px;">可从已上传文件读取原子、轨道和振动元数据。</div>
+      <div class="mw-title" style="margin-top:7px;">分析任务</div>
+      <label class="mw-task"><input type="checkbox" id="mw-mo"><span>分子轨道</span><input type="text" id="mw-mo-val" placeholder="轨道：12, 13"></label>
+      <label class="mw-task"><input type="checkbox" id="mw-density"><span>电子密度</span><span></span></label>
+      <label class="mw-task"><input type="checkbox" id="mw-esp"><span>ESP</span><input type="text" id="mw-esp-iso" placeholder="等值 0.001"></label>
+      <label class="mw-task"><input type="checkbox" id="mw-nci"><span>NCI</span><input type="number" id="mw-nci-grid" min="1" value="1" title="网格级别"></label>
+      <label class="mw-task"><input type="checkbox" id="mw-igmh"><span>IGMH</span><input type="text" id="mw-frags" placeholder="片段：1-6 | 7-12"></label>
+      <label class="mw-task"><input type="checkbox" id="mw-vib"><span>振动</span><input type="text" id="mw-vib-modes" placeholder="模式：1, 2"></label>
+      <label class="mw-task"><input type="checkbox" id="mw-charge"><span>原子电荷</span><select id="mw-charge-methods" multiple size="3"><option>ADCH</option><option>Hirshfeld</option><option>Mulliken</option><option>CM5</option><option>SCPA</option><option>VDD</option></select></label>
+      <div class="mw-actions"><button type="button" onclick="generateMwPackage()">生成 Multiwfn 分析 ZIP</button></div>
+    </div>
+    <div class="mw-card">
+      <div class="mw-title">4 · 上传用户计算结果或 Multiwfn 输出</div>
+      <label class="mw-drop" for="mw-import">上传 FCHK/Molden 波函数，或分析结果 ZIP/Cube</label>
+      <input type="file" id="mw-import" multiple accept=".zip,.json,.fchk,.fch,.wfn,.wfx,.molden,.mwfn,.cub,.cube,.xyz,.txt,.out,.log">
+      <div id="mw-import-status" style="margin-top:5px;color:var(--txm);font-size:9px;">上传的波函数进入 MOLECULES，分析结果进入 CALC。</div>
+    </div>
+    <div class="mw-card">
+      <div class="mw-title">CALC 结果</div>
+      <div id="mw-results"><div class="empty">CALC 为空</div></div>
+    </div>
   </div>
   <div class="tab-pane" id="tab-surface">
     <div class="sl">表面风格 <em>— --surface-style</em></div>
@@ -1190,7 +1249,8 @@ new ResizeObserver(resizeViewerCanvas).observe($('vwrap'));
 const S={mol:null,fmt:'svg',style:'default',hy:'auto',fog:'on',grad:'on',
   bbe:'auto',bgr:'auto',ghosts:'auto',axes:'auto',hedge:'on',
   vdwil:'auto',atomil:'auto',tse:'auto',ncie:'auto',align:'auto',
-  smi:false,lastTemp:null,lastCmd:null};
+  smi:false,lastTemp:null,lastCmd:null,calcBinding:{}};
+const MW={lastImport:null};
 
 function toast(msg,t='success'){
   const e=document.createElement('div');e.className='toast '+t;
@@ -1271,25 +1331,31 @@ async function loadMols(){
   try{
     const files=await(await fetch('/api/molecules')).json();
     const list=$('mol-list');
+    const mwSource=$('mw-source-select');
+    const mwStructure=$('mw-structure-select');
+    if(mwSource)mwSource.innerHTML='<option value="">— 选择波函数文件 —</option>';
+    if(mwStructure)mwStructure.innerHTML='<option value="">— 选择 XYZ/MOL/PDB 等结构 —</option>';
     $('o-esp').innerHTML='<option value="">\u2014 \u4e0d\u4f7f\u7528 \u2014</option>';
     $('o-ncisurf').innerHTML='<option value="">\u2014 \u4e0d\u4f7f\u7528 \u2014</option>';
     $('o-ovl').innerHTML='<option value="">\u2014 \u4e0d\u4f7f\u7528 \u2014</option>';
     if(!files.length){list.innerHTML='<div class="empty">\u6682\u65e0\u6587\u4ef6</div>';return;}
     list.innerHTML='';
     files.forEach(f=>{
-      const ext=f.suffix.replace('.','');
+      const ext=f.suffix.replace(/^\./,'');
       const item=document.createElement('div');item.className='fi'+(S.mol===f.name?' active':'');item.dataset.name=f.name;
       item.innerHTML='<span class="eb '+ext+'">'+ext+'</span><span class="fn" title="'+f.name+'">'+f.name+'</span><span class="fz">'+fmtB(f.size)+'</span><button class="fdel">\u2715</button>';
       item.addEventListener('click',e=>{if(!e.target.classList.contains('fdel'))selMol(f.name);});
       item.querySelector('.fdel').addEventListener('click',e=>{e.stopPropagation();delMol(f.name);});
       list.appendChild(item);
-      if(ext==='cube'){
+      if(['fchk','fch','wfn','wfx','molden','molden.input','mwfn'].includes(ext)&&mwSource){const so=document.createElement('option');so.value=f.name;so.textContent=f.name;mwSource.appendChild(so);}
+      if(!['cube','cub','smi','smiles'].includes(ext)&&mwStructure){const qo=document.createElement('option');qo.value=f.name;qo.textContent=f.name;mwStructure.appendChild(qo);}
+      if(['cube','cub'].includes(ext)){
         ['o-esp','o-ncisurf'].forEach(sel=>{const o=document.createElement('option');o.value=f.name;o.textContent=f.name;$(sel).appendChild(o);});}
       const oo=document.createElement('option');oo.value=f.name;oo.textContent=f.name;$('o-ovl').appendChild(oo);
     });checkSurfMx();
   }catch(e){console.error(e);}
 }
-function selMol(name){S.mol=name;S.smi=false;$('sn').textContent=name;$('sn').className='';
+function selMol(name){S.mol=name;S.smi=false;S.calcBinding={cmap_ref:S.calcBinding.cmap_ref||''};$('sn').textContent=name;$('sn').className='';
   $a('.fi').forEach(x=>x.classList.toggle('active',x.dataset.name===name));
   $('rb').disabled=false;loadViewer(name);}
 async function delMol(name){
@@ -1389,13 +1455,13 @@ function clearPrev(){
 
 /* RENDER */
 $('rb').addEventListener('click',async()=>{
-  if(!S.mol&&!S.smi)return;
+  if(!S.mol&&!S.smi&&!S.calcBinding.file_ref)return;
   const btn=$('rb'),log=$('log');
   const cj=$('o-json').value.trim();
   if(cj){try{JSON.parse(cj);}catch{toast('JSON \u683c\u5f0f\u9519\u8bef','error');return;}}
   if($('o-gts').checked&&$('o-gtrj').checked){toast('--gif-ts \u4e0e --gif-trj \u4e92\u65a5','error');return;}
   const p={
-    file:S.smi?'':S.mol,format:S.fmt,style:S.style,
+    file:S.smi?'':(S.calcBinding.file_ref?'':S.mol),file_ref:S.calcBinding.file_ref||'',format:S.fmt,style:S.style,
     smi:S.smi?$('smi-input').value.trim():'',
     mol_frame:$('o-molfr').value,rebuild:$('o-rebuild').checked,threshold:$('o-thresh').value,
     bohr:$('o-bohr').checked,
@@ -1427,7 +1493,7 @@ $('rb').addEventListener('click',async()=>{
     mol_color:$('o-molcol').value,highlights:getHighlights(),
     idx:$('o-idx').value,stereo:$('o-stereo').checked?($('o-stereo-classes').value.trim()||true):false,stereo_style:$('o-stereo-style').value,
     annotations:$('o-annot').value,label_size:$('o-lsize').value,
-    cmap_data:$('o-cmap').value.trim(),cmap_range:$('o-cmrng').value,
+    cmap_data:$('o-cmap').value.trim(),cmap_ref:S.calcBinding.cmap_ref||'',cmap_range:$('o-cmrng').value,
     cmap_symm:$('o-cmsymm').checked,cmap_palette:$('o-cmpal').value,cbar:$('o-cbar').checked,
     measure:$('o-meas').value,vector_data:$('o-vector').value.trim(),vector_scale:$('o-vscale').value,
     no_orient:$('o-nori').checked,ref:$('o-ref').value,
@@ -1440,7 +1506,7 @@ $('rb').addEventListener('click',async()=>{
     flat_mo:$('o-flatmo').checked,mo_blur:$('o-moblur').value,mo_upsample:$('o-moup').value,
     mo_outline_width:$('o-moow').value,mo_outline_color:$('o-mooc').value,
     dens:$('o-dens').checked,dens_color:$('o-dcol').value,
-    esp_file:$('o-esp').value,nci_surf_file:$('o-ncisurf').value,
+    esp_file:$('o-esp').value,esp_ref:S.calcBinding.esp_ref||'',nci_surf_file:$('o-ncisurf').value,nci_surf_ref:S.calcBinding.nci_surf_ref||'',
     nci_mode:$('o-ncimode').value,nci_cutoff:$('o-ncicut').value,
     hull:$('o-hull').value,hull_color:$('o-hcol').value,hull_opacity:$('o-hop').value,
     hull_color_type:$('o-hctype').value,ring_min_size:$('o-ringmin').value,ring_max_size:$('o-ringmax').value,
@@ -1490,6 +1556,86 @@ $('cpcmd').addEventListener('click',()=>{
 $('fsbtn').addEventListener('click',()=>{const v=$('vp');if(v.requestFullscreen)v.requestFullscreen();});
 $('rfg').addEventListener('click',loadFigs);
 
+/* MULTIWFN OFFLINE INTERFACE */
+async function loadMwSettings(){try{const d=await(await fetch('/api/tool-settings')).json();$('mw-exe').value=d.multiwfn_exe||'';
+  $('mw-exe-status').textContent=d.exists?'已找到 Multiwfn.exe，分析脚本将默认使用此路径。':(d.multiwfn_exe?'路径已保存，但当前未找到文件。':'尚未配置；路径会写入生成的 Windows 分析脚本。');}catch(e){console.error(e);}}
+async function saveMwSettings(){const res=await fetch('/api/tool-settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({multiwfn_exe:$('mw-exe').value.trim()})});
+  const d=await res.json();if(!res.ok){toast(d.error||'路径保存失败','error');return;}$('mw-exe-status').textContent=d.exists?'路径已保存并验证。':'路径已保存，但当前未找到文件；请检查后再运行脚本。';toast('Multiwfn 路径已保存');}
+async function downloadZipResponse(res,fallback){if(!res.ok){const d=await res.json();throw new Error(d.error||'脚本生成失败');}
+  const blob=await res.blob();const cd=res.headers.get('Content-Disposition')||'';const m=cd.match(/filename=([^;]+)/i);const name=m?m[1].replace(/["']/g,''):fallback;
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+async function generateCalculationPackage(){const source=$('mw-structure-select').value;if(!source){toast('请先选择结构文件','error');return;}
+  const payload={source_name:source,engine:$('mw-engine').value,functional:$('mw-functional').value,basis:$('mw-basis').value,
+    charge:$('mw-qcharge').value,multiplicity:$('mw-qmult').value,opt:$('mw-opt').checked,freq:$('mw-freq').checked,cores:$('mw-cores').value,memory:$('mw-memory').value};
+  setStatus('busy','生成计算脚本');try{const res=await fetch('/api/multiwfn/calculation-package',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    await downloadZipResponse(res,source.replace(/\.[^.]+$/,'')+'_'+payload.engine+'.zip');toast('波函数计算脚本已生成；应用不会启动计算');setStatus('ok','脚本完成');
+  }catch(e){toast(e.message,'error');setStatus('error','生成失败');}}
+function mwTasks(){
+  const tasks=[];
+  if($('mw-mo').checked)tasks.push({kind:'mo',orbitals:$('mw-mo-val').value});
+  if($('mw-density').checked)tasks.push({kind:'density'});
+  if($('mw-esp').checked)tasks.push({kind:'esp',iso:$('mw-esp-iso').value||0.001});
+  if($('mw-nci').checked)tasks.push({kind:'nci',grid:$('mw-nci-grid').value||1});
+  if($('mw-igmh').checked){const f=$('mw-frags').value.split('|');tasks.push({kind:'igmh',fragment1:(f[0]||'').trim(),fragment2:(f[1]||'').trim()});}
+  if($('mw-vib').checked)tasks.push({kind:'vibration',modes:$('mw-vib-modes').value,frames:30});
+  if($('mw-charge').checked){const methods=[...$('mw-charge-methods').selectedOptions].map(o=>o.value);tasks.push({kind:'charge',methods:methods.length?methods:['ADCH']});}
+  return tasks;
+}
+async function generateMwPackage(){
+  const source=$('mw-source-select').value||$('mw-source-name').value.trim();
+  if(!source){toast('请选择或填写波函数源文件','error');return;}
+  setStatus('busy','生成任务包');
+  try{
+    const res=await fetch('/api/multiwfn/package',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_name:source,profile:$('mw-profile').value,tasks:mwTasks()})});
+    await downloadZipResponse(res,source.replace(/\.[^.]+$/,'')+'_multiwfn.zip');
+    toast('Multiwfn 综合任务包已生成');setStatus('ok','任务包完成');
+  }catch(e){toast(e.message,'error');setStatus('error','生成失败');}
+}
+async function importMwResults(files){
+  if(!files.length)return;const fd=new FormData();files.forEach(f=>fd.append('files',f));setStatus('busy','回导计算');
+  try{const res=await fetch('/api/multiwfn/import',{method:'POST',body:fd});const d=await res.json();if(!res.ok)throw new Error(d.error||'回导失败');
+    MW.lastImport=d;renderMwImport(d);await loadCalc();toast('Multiwfn 结果已回导到 CALC');setStatus('ok','回导完成');
+  }catch(e){toast(e.message,'error');$('mw-import-status').textContent=e.message;setStatus('error','回导失败');}
+}
+async function importReturnedFiles(files){const waveExt=['.fchk','.fch','.wfn','.wfx','.molden','.mwfn'];const wave=[],results=[];
+  files.forEach(f=>{const n=f.name.toLowerCase();(waveExt.some(ext=>n.endsWith(ext))||n.endsWith('.molden.input')?wave:results).push(f);});
+  let uploaded=0;for(const f of wave){const fd=new FormData();fd.append('file',f);const r=await fetch('/api/upload',{method:'POST',body:fd});const d=await r.json();if(r.ok)uploaded++;else toast(d.error||('上传失败：'+f.name),'error');}
+  if(uploaded){await loadMols();$('mw-import-status').textContent='已上传 '+uploaded+' 个波函数文件，可在上方选择并生成分析脚本。';toast('波函数结果已进入 MOLECULES');}
+  if(results.length)await importMwResults(results);
+}
+function renderMwImport(data){
+  const status=$('mw-import-status');
+  if(data.inferred){status.textContent='未找到 manifest：结果已归入未分类，需要人工确认。';return;}
+  status.innerHTML='';
+  data.jobs.forEach((job,index)=>{const box=document.createElement('div');box.className='mw-job '+job.status;
+    const artifacts=job.artifacts.map(a=>'<div class="mw-artifact"><span>'+a.role+' · '+a.name+'</span><small>'+fmtB(a.size)+'</small></div>').join('');
+    const notes=[...(job.missing||[]),...(job.warnings||[])].join('；');
+    box.innerHTML='<div class="mw-job-head"><b>'+job.kind+' / '+job.job_id+'</b><small>'+job.status+'</small></div>'+artifacts+(notes?'<small>'+notes+'</small>':'')+(Object.values(job.binding||{}).some(Boolean)?'<div class="mw-actions"><button type="button" onclick="applyMwJob('+index+')">一键应用到渲染</button></div>':'');status.appendChild(box);});
+}
+function applyMwJob(index){
+  const job=MW.lastImport?.jobs?.[index];if(!job)return;const b=job.binding||{};
+  if(b.file_ref){S.calcBinding={cmap_ref:S.calcBinding.cmap_ref||'',file_ref:b.file_ref,esp_ref:b.esp_ref||'',nci_surf_ref:b.nci_surf_ref||''};S.mol='__calc__';S.smi=false;
+    const primary=job.artifacts.find(a=>a.id===b.file_ref);$('sn').textContent='CALC / '+(primary?.name||job.job_id);$('sn').className='';$('rb').disabled=false;resetViewer('CALC 计算场文件将在右侧直接渲染');}
+  if(b.cmap_ref)S.calcBinding.cmap_ref=b.cmap_ref;
+  $('o-mo').checked=!!b.mo;$('o-dens').checked=!!b.dens;$('o-esp').value='';$('o-ncisurf').value='';
+  if(b.gif_trj){$('o-gtrj').checked=true;$('o-gts').checked=false;}
+  if(b.format){const tab=document.querySelector('.fmt-tab[data-fmt="'+b.format+'"]');if(tab)tab.click();}
+  checkSurfMx();switchTab(b.gif_trj?'gif':(b.cmap_ref&&!b.file_ref?'color':'surface'));toast('已应用 '+job.job_id+' 的渲染参数');
+}
+async function loadCalc(){
+  try{const items=await(await fetch('/api/calc')).json();const root=$('mw-results');if(!items.length){root.innerHTML='<div class="empty">CALC 为空</div>';return;}
+    root.innerHTML='';items.slice(0,30).forEach(a=>{const row=document.createElement('div');row.className='mw-artifact';row.innerHTML='<span title="'+a.relative_path+'">'+a.role+' · '+a.name+'</span><a class="kbd" href="/api/calc/'+encodeURIComponent(a.id)+'">下载</a><button class="dx" title="删除整个任务包" onclick="deleteCalcPackage(\''+a.source+'\',\''+a.package_id+'\')">×</button>';root.appendChild(row);});
+  }catch(e){console.error(e);}
+}
+async function deleteCalcPackage(source,packageId){if(!confirm('删除该 CALC 任务包及全部结果？'))return;
+  const r=await fetch('/api/calc/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source,package_id:packageId})});
+  if(r.ok){await loadCalc();toast('CALC 任务包已删除');}else{const d=await r.json();toast(d.error||'删除失败','error');}}
+$('mw-source-select').addEventListener('change',async e=>{if(!e.target.value)return;if(e.target.value)$('mw-source-name').value='';
+  try{const r=await fetch('/api/multiwfn/source-info?name='+encodeURIComponent(e.target.value));const d=await r.json();if(!r.ok)throw new Error(d.error);
+    $('mw-source-info').textContent='原子 '+(d.atoms??'未识别')+' · 轨道 '+(d.orbitals??'未识别')+' · 振动模式 '+(d.vibrations??'未识别');
+  }catch(err){$('mw-source-info').textContent=err.message;}});
+$('mw-import').addEventListener('change',e=>importReturnedFiles([...e.target.files]));
+
 /* UPLOAD */
 async function uploadFiles(files){
   let ok=0;
@@ -1506,7 +1652,7 @@ dz.addEventListener('dragleave',()=>dz.classList.remove('dragover'));
 dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('dragover');uploadFiles([...e.dataTransfer.files]);});
 
 /* INIT */
-(async()=>{await loadMols();await loadTemp();await loadFigs();setStatus('ok','\u5c31\u7eea');})();
+(async()=>{await loadMols();await loadTemp();await loadFigs();await loadCalc();await loadMwSettings();setStatus('ok','\u5c31\u7eea');})();
 
 </script>
 </body>

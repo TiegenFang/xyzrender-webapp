@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates the XYZRender Workstation V1 web interface."""
+"""Generates the XYZRender Workstation web interface."""
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -1350,14 +1350,14 @@ HTML = f"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>XYZRender Workstation V1</title>
+<title>XYZRender Workstation</title>
 <style>{CSS}</style>
 <link rel="stylesheet" href="/static/pretty_lattice_refresh.css">
 </head>
 <body>
 <div id="pb2"></div>
 <header id="topbar">
-  <div class="logo">XYZ<span>Render</span></div><span class="release-label">V1</span>
+  <div class="logo">XYZ<span>Render</span></div>
   <div class="tagline">科研图稿工作台</div>
   <div class="workflow" aria-label="工作流程">
     <span><b>1</b> 选择结构</span><i>→</i><span><b>2</b> 调整外观</span><i>→</i><span><b>3</b> 导出图稿</span>

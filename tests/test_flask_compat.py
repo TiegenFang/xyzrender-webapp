@@ -46,7 +46,8 @@ def test_v1_embeds_orientation_canvas_beside_render_output():
     html = response.get_data(as_text=True)
 
     assert response.status_code == 200
-    assert '<span class="release-label">V1</span>' in html
+    assert '<span class="release-label">V1</span>' not in html
+    assert "XYZRender Workstation V1" not in html
     assert 'id="view-workspace"' in html
     assert html.index('id="orientation-pane"') < html.index('id="render-pane"')
     assert 'id="molc"' in html

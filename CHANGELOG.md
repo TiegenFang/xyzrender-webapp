@@ -257,3 +257,51 @@ This append-only file records user-requested changes made to this project.
   - python -m pytest: 27 passed
   - Browser check: c2c1im ring connectivity is correct and HoukPremium remains clean after X/Y/Z rotation
   - git diff --check: passed
+
+## 2026-07-15 18:43:36+08:00
+
+- Request: 实现 Multiwfn 离线任务包生成、CALC 回导和网页计算接口 V1
+- Status: Completed
+- Changes:
+  - 新增 Multiwfn 2026.4.10 版本化模板，支持 MO、密度、ESP、NCI、IGMH、振动与六种电荷任务综合 ZIP
+  - 新增安全回导、artifact 注册、结果校验、CALC 管理及受控渲染绑定
+  - 在现有单页工作流新增计算标签页、结果回导和一键应用交互
+  - 补充离线包、ZIP 安全、结果绑定和 Web API 自动化测试
+- Files:
+  - `src/xyzrender_workstation/core/multiwfn_offline.py`
+  - `src/xyzrender_workstation/core/render_service.py`
+  - `src/xyzrender_workstation/core/__init__.py`
+  - `src/xyzrender_workstation/web/app.py`
+  - `src/xyzrender_workstation/web/templates/index.html`
+  - `tests/test_multiwfn_offline.py`
+- Verification:
+  - python -m pytest -q: 37 passed
+  - python -m py_compile: passed
+  - git diff --check: passed
+  - In-app browser: compute tab visible, seven task controls present, no console errors
+  - External Multiwfn execution not run: executable and wavefunction fixture unavailable
+
+## 2026-07-15 19:05:00+08:00
+
+- Request: 修正 Multiwfn 工作流，只生成外部计算与分析脚本，等待用户回传结果后再交给 xyzrender 绘制
+- Status: Completed
+- Changes:
+  - 新增本地 Multiwfn.exe 路径设置，并将配置路径写入 Windows 分析任务启动脚本；应用本身不启动 Multiwfn
+  - 新增从结构文件生成 Gaussian/ORCA 计算脚本 ZIP，支持泛函、基组、电荷、多重度、优化、频率、核心数与内存设置
+  - Gaussian 脚本在用户外部运行后通过 formchk 产出 FCHK，ORCA 脚本通过 orca_2mkl 产出 Molden 波函数
+  - 计算页调整为“工具路径—结构计算脚本—波函数分析脚本—结果回传”四阶段流程
+  - 支持回传并识别 `.molden.input`，波函数进入 MOLECULES，Multiwfn 分析结果进入 CALC 后再绑定 xyzrender
+  - 增加计算脚本、工具设置、Molden 回传与 Web API 回归测试
+- Files:
+  - `.gitignore`
+  - `src/xyzrender_workstation/core/multiwfn_offline.py`
+  - `src/xyzrender_workstation/core/__init__.py`
+  - `src/xyzrender_workstation/web/app.py`
+  - `src/xyzrender_workstation/web/templates/index.html`
+  - `tests/test_multiwfn_offline.py`
+- Verification:
+  - python -m pytest -q: 44 passed
+  - python -m py_compile: passed
+  - git diff --check: passed
+  - In-app browser: four-stage compute workflow visible, structure/ORCA selection reaches script generation, no console errors
+  - No external Multiwfn, Gaussian, ORCA, or formchk process was executed

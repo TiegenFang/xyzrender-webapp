@@ -10,6 +10,7 @@ venv/
 # Build and packaging
 build/
 dist/
+dist-self-test-data/
 desktop/__pycache__/
 *.egg-info/
 
@@ -19,6 +20,7 @@ FIGURE/*
 flask_stdout.log
 flask_stderr.log
 logs/
+.xyzrender_settings.json
 
 # Archived desktop implementation (kept locally under old/)
 old/

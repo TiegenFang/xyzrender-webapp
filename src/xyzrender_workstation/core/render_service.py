@@ -8,7 +8,7 @@ import logging
 import shlex
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import xyzrender
 from xyzrender.export import svg_to_pdf, svg_to_png
@@ -123,11 +123,23 @@ class RenderService:
         return cleaned
 
 
-def request_from_web_payload(payload: dict[str, Any], molecule_dir: Path, temp_dir: Path) -> RenderRequest:
+def request_from_web_payload(
+    payload: dict[str, Any],
+    molecule_dir: Path,
+    temp_dir: Path,
+    artifact_resolver: Callable[[str], Path] | None = None,
+) -> RenderRequest:
     """Map the stable Flask JSON shape to the shared Python API request."""
     source_name = str(payload.get("file", ""))
+    source_ref = str(payload.get("file_ref", ""))
     smiles = str(payload.get("smi", "")).strip()
-    source: str | Path = smiles or (molecule_dir / Path(source_name).name)
+    if source_ref:
+        if artifact_resolver is None:
+            raise ValueError("CALC artifact references are not enabled")
+        source = artifact_resolver(source_ref)
+        source_name = source.name
+    else:
+        source = smiles or (molecule_dir / Path(source_name).name)
     fmt = str(payload.get("format", "svg")).lower()
     stem = "smiles_render" if smiles else Path(source_name).stem
     style = str(payload.get("style", "default"))
@@ -211,8 +223,20 @@ def request_from_web_payload(payload: dict[str, Any], molecule_dir: Path, temp_d
         render_options["exclude"] = str(payload["exclude"])
     if payload.get("esp_file"):
         render_options["esp"] = str(molecule_dir / Path(payload["esp_file"]).name)
+    if payload.get("esp_ref"):
+        if artifact_resolver is None:
+            raise ValueError("CALC artifact references are not enabled")
+        render_options["esp"] = str(artifact_resolver(str(payload["esp_ref"])))
     if payload.get("nci_surf_file"):
         render_options["nci"] = str(molecule_dir / Path(payload["nci_surf_file"]).name)
+    if payload.get("nci_surf_ref"):
+        if artifact_resolver is None:
+            raise ValueError("CALC artifact references are not enabled")
+        render_options["nci"] = str(artifact_resolver(str(payload["nci_surf_ref"])))
+    if payload.get("cmap_ref"):
+        if artifact_resolver is None:
+            raise ValueError("CALC artifact references are not enabled")
+        render_options["cmap"] = str(artifact_resolver(str(payload["cmap_ref"])))
     if payload.get("overlay_file"):
         render_options["overlay"] = str(molecule_dir / Path(payload["overlay_file"]).name)
     if payload.get("supercell"):
@@ -239,9 +263,9 @@ def request_from_web_payload(payload: dict[str, Any], molecule_dir: Path, temp_d
             "anchor": payload.get("anchor") or None,
         })
     handled = set(direct_map) | {
-        "file", "format", "smi", "charge", "multiplicity", "bohr", "rebuild",
+        "file", "file_ref", "format", "smi", "charge", "multiplicity", "bohr", "rebuild",
         "mol_frame", "ts", "ts_frame", "nci", "ensemble", "hydrogens",
-        "hy_indices", "only", "exclude", "esp_file", "nci_surf_file",
+        "hy_indices", "only", "exclude", "esp_file", "esp_ref", "nci_surf_file", "nci_surf_ref", "cmap_ref",
         "overlay_file", "supercell", "dpi", "gif_rot", "gif_ts", "gif_trj",
         "gif_diffuse", "gif_fps", "rot_frames", "vib_frames", "diffuse_frames",
         "diffuse_noise", "diffuse_bonds", "diffuse_rot", "anchor",

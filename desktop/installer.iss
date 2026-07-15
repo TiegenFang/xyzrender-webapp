@@ -1,5 +1,5 @@
 #define MyAppName "XYZRender Workstation"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "1.0.0"
 #define MyAppPublisher "XYZRender Workstation"
 #define MyAppExeName "XYZRender Workstation.exe"
 

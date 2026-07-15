@@ -1,7 +1,7 @@
 """
-xyzrender Web Application  V1
+xyzrender Web Application
 ══════════════════════════════════════════════════════════
-Changes in V1:
+Current workstation features:
   • TEMP/  — all renders go here first (auto-cleared on startup)
   • FIGURE/ — only explicitly saved files land here
   • /api/temp_figures   — list TEMP
@@ -15,7 +15,7 @@ import json, logging, math, os, shlex, shutil, subprocess
 from pathlib import Path
 
 import numpy as np
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 from werkzeug.exceptions import HTTPException
 from werkzeug.utils import secure_filename
 
@@ -23,6 +23,14 @@ from xyzrender_workstation.core.render_service import (
     RenderService,
     UnsupportedRenderOption,
     request_from_web_payload,
+)
+from xyzrender_workstation.core.multiwfn_offline import (
+    MultiwfnArtifactStore,
+    MultiwfnPackageError,
+    MultiwfnPackageGenerator,
+    MultiwfnTemplateRegistry,
+    QuantumInputPackageGenerator,
+    inspect_wavefunction_source,
 )
 from xyzrender_workstation.paths import ensure_runtime_directories, resolve_workspace_root
 
@@ -32,6 +40,10 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = resolve_workspace_root()
 MOLECULES_DIR, TEMP_DIR, FIGURE_DIR = ensure_runtime_directories(BASE_DIR)
+CALC_DIR = BASE_DIR / "CALC"
+CALC_STORE = MultiwfnArtifactStore(CALC_DIR)
+MULTIWFN_PACKAGES_DIR = TEMP_DIR / "multiwfn_packages"
+SETTINGS_FILE = BASE_DIR / ".xyzrender_settings.json"
 
 RENDER_SERVICE = RenderService()
 
@@ -39,7 +51,18 @@ SUPPORTED_EXTENSIONS = {
     ".xyz",".mol",".mol2",".sdf",".pdb",
     ".out",".log",".com",".gjf",".gjc",".inp",".nw",".fchk",
     ".cube",".cub",".cif",".smi",".smiles",".vasp",
+    ".fch",".wfn",".wfx",".molden",".mwfn",
 }
+
+
+def _is_supported_molecule_file(name):
+    lower = Path(name).name.lower()
+    return lower.endswith(".molden.input") or Path(lower).suffix in SUPPORTED_EXTENSIONS
+
+
+def _molecule_suffix(name):
+    lower = Path(name).name.lower()
+    return ".molden.input" if lower.endswith(".molden.input") else Path(lower).suffix
 STYLES = ["default","flat","paton","pmol","skeletal","bubble","vdw","tube","mtube","btube","wire","graph"]
 STYLE_DESC = {
     "default":"CPK 渐变雾化","flat":"扁平 无渐变","paton":"PyMOL 风格",
@@ -50,6 +73,19 @@ GIF_AXES = ["y","x","z","xy","xz","yz","yx","zx","zy","-y","-x","-z","-xy","-xz"
 SURFACE_STYLES = ["solid","mesh","contour","dot"]
 NCI_MODES      = ["avg","pixel","uniform"]
 CMAP_PALETTES  = ["viridis","spectral","coolwarm","plasma","inferno","magma","RdBu","rainbow","batlow","roma","vik","bam","managua"]
+
+
+def _load_local_settings():
+    try:
+        data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8")) if SETTINGS_FILE.is_file() else {}
+    except (OSError, json.JSONDecodeError):
+        data = {}
+    return {"multiwfn_exe": str(data.get("multiwfn_exe", ""))}
+
+
+def _save_local_settings(data):
+    SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SETTINGS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 _XYZ_HELP_CACHE = None
 _XYZ_VERSION_CACHE = None
@@ -509,9 +545,9 @@ def health():
 @app.route("/api/molecules")
 def list_molecules():
     return jsonify([
-        {"name":f.name,"suffix":f.suffix.lower(),"size":f.stat().st_size}
+        {"name":f.name,"suffix":_molecule_suffix(f.name),"size":f.stat().st_size}
         for f in sorted(MOLECULES_DIR.iterdir())
-        if f.is_file() and f.suffix.lower() in SUPPORTED_EXTENSIONS
+        if f.is_file() and _is_supported_molecule_file(f.name)
     ])
 
 @app.route("/api/upload",methods=["POST"])
@@ -521,8 +557,8 @@ def upload():
     if not f.filename: return jsonify({"error":"Empty filename"}),400
     filename=secure_filename(f.filename)
     if not filename: return jsonify({"error":"Invalid filename"}),400
-    suffix=Path(filename).suffix.lower()
-    if suffix not in SUPPORTED_EXTENSIONS: return jsonify({"error":f"Unsupported: {suffix}"}),400
+    suffix=_molecule_suffix(filename)
+    if not _is_supported_molecule_file(filename): return jsonify({"error":f"Unsupported: {suffix}"}),400
     f.save(MOLECULES_DIR/filename)
     logger.info("Uploaded molecule: %s", filename)
     return jsonify({"ok":True,"name":filename})
@@ -533,6 +569,124 @@ def delete_molecule():
     path=MOLECULES_DIR/Path(name).name
     if not path.exists(): return jsonify({"error":"Not found"}),404
     path.unlink(); return jsonify({"ok":True})
+
+
+# ── Multiwfn offline packages and CALC artifacts ────────────────────────────
+@app.get("/api/multiwfn/templates")
+def multiwfn_templates():
+    return jsonify(MultiwfnTemplateRegistry.metadata())
+
+
+@app.route("/api/tool-settings", methods=["GET", "POST"])
+def tool_settings():
+    if request.method == "POST":
+        data = request.json or {}
+        path = str(data.get("multiwfn_exe", "")).strip().strip('"')
+        if path and Path(path).name.lower() != "multiwfn.exe":
+            return jsonify({"error": "Please select Multiwfn.exe"}), 400
+        _save_local_settings({"multiwfn_exe": path})
+    settings = _load_local_settings()
+    configured = settings["multiwfn_exe"]
+    return jsonify({**settings, "exists": bool(configured and Path(configured).is_file())})
+
+
+@app.get("/api/multiwfn/source-info")
+def multiwfn_source_info():
+    name = request.args.get("name", "")
+    path = MOLECULES_DIR / Path(name).name
+    if not path.is_file():
+        return jsonify({"error": "Wavefunction source not found"}), 404
+    try:
+        return jsonify(inspect_wavefunction_source(path))
+    except (MultiwfnPackageError, OSError) as exc:
+        return jsonify({"error": str(exc)}), 400
+
+
+@app.post("/api/multiwfn/package")
+def generate_multiwfn_package():
+    data = request.json or {}
+    source_name = str(data.get("source_name") or data.get("source") or "")
+    try:
+        path, _manifest = MultiwfnPackageGenerator().generate(
+            source_name=source_name,
+            tasks=data.get("tasks") or [],
+            output_dir=MULTIWFN_PACKAGES_DIR,
+            profile=str(data.get("profile") or MultiwfnTemplateRegistry.metadata()["default"]),
+            multiwfn_exe=_load_local_settings()["multiwfn_exe"],
+        )
+    except (MultiwfnPackageError, TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    logger.info("Generated offline Multiwfn package: %s", path.name)
+    return send_file(path, as_attachment=True, download_name=path.name, mimetype="application/zip")
+
+
+@app.post("/api/multiwfn/calculation-package")
+def generate_calculation_package():
+    data = request.json or {}
+    source_name = str(data.get("source_name", ""))
+    source = MOLECULES_DIR / Path(source_name).name
+    if not source.is_file():
+        return jsonify({"error": "Structure source not found"}), 404
+    try:
+        symbols, coordinates, _comment = _load_coords(source)
+        path, _manifest = QuantumInputPackageGenerator().generate(
+            source_name, symbols, coordinates.tolist(), data, MULTIWFN_PACKAGES_DIR)
+    except (MultiwfnPackageError, TypeError, ValueError, OSError) as exc:
+        return jsonify({"error": str(exc)}), 400
+    logger.info("Generated wavefunction calculation scripts: %s", path.name)
+    return send_file(path, as_attachment=True, download_name=path.name, mimetype="application/zip")
+
+
+@app.post("/api/multiwfn/import")
+def import_multiwfn_results():
+    uploads = request.files.getlist("files") or request.files.getlist("file")
+    if not uploads:
+        return jsonify({"error": "No Multiwfn result files supplied"}), 400
+    payloads = []
+    for upload_file in uploads:
+        if upload_file.filename:
+            payloads.append((upload_file.filename, upload_file.read()))
+    try:
+        result = CALC_STORE.import_payloads(payloads)
+    except (MultiwfnPackageError, OSError) as exc:
+        logger.warning("Rejected Multiwfn result import: %s", exc)
+        return jsonify({"error": str(exc)}), 400
+    logger.info("Imported Multiwfn package %s", result.get("package_id"))
+    return jsonify(result)
+
+
+@app.get("/api/calc")
+def list_calc_artifacts():
+    artifacts = CALC_STORE.list()
+    for artifact in artifacts:
+        artifact.pop("path", None)
+    return jsonify(artifacts)
+
+
+@app.get("/api/calc/<path:artifact_id>")
+def download_calc_artifact(artifact_id):
+    try:
+        path = CALC_STORE.resolve(artifact_id)
+    except FileNotFoundError:
+        return jsonify({"error": "CALC artifact not found"}), 404
+    return send_file(path, as_attachment=True, download_name=path.name)
+
+
+@app.get("/api/calc/package/<source>/<package_id>")
+def calc_package_detail(source, package_id):
+    try:
+        return jsonify(CALC_STORE.package_detail(source, package_id))
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return jsonify({"error": "CALC package not found"}), 404
+
+
+@app.post("/api/calc/delete")
+def delete_calc_package():
+    data = request.json or {}
+    deleted = CALC_STORE.delete_package(str(data.get("source", "")), str(data.get("package_id", "")))
+    if not deleted:
+        return jsonify({"error": "CALC package not found"}), 404
+    return jsonify({"ok": True})
 
 
 # ── TEMP figures (preview) ───────────────────────────────────────────────────
@@ -646,7 +800,7 @@ def render_molecule_shared():
     """Shared Python-API renderer; uncommon legacy flags retain a safe fallback."""
     payload = request.json or {}
     try:
-        render_request = request_from_web_payload(payload, MOLECULES_DIR, TEMP_DIR)
+        render_request = request_from_web_payload(payload, MOLECULES_DIR, TEMP_DIR, CALC_STORE.resolve)
         result = RENDER_SERVICE.render(render_request)
     except UnsupportedRenderOption:
         logger.info("Falling back to legacy renderer for payload keys: %s", sorted(payload))
@@ -668,7 +822,7 @@ def render_molecule_shared():
 def render_molecule_legacy():
     d=request.json or {}
 
-    mol_file=d.get("file",""); fmt=d.get("format","svg").lower()
+    mol_file=d.get("file",""); file_ref=d.get("file_ref",""); fmt=d.get("format","svg").lower()
     smi=d.get("smi",""); mol_frame=d.get("mol_frame","")
     bohr=d.get("bohr",False)
     rebuild=d.get("rebuild",False); threshold=d.get("threshold","")
@@ -703,7 +857,7 @@ def render_molecule_legacy():
     mol_color=d.get("mol_color",""); highlights=d.get("highlights",[])
     idx_mode=d.get("idx",""); stereo=d.get("stereo",False)
     stereo_style=d.get("stereo_style",""); annotations=d.get("annotations","")
-    label_size=d.get("label_size",""); cmap_data=d.get("cmap_data","")
+    label_size=d.get("label_size",""); cmap_data=d.get("cmap_data",""); cmap_ref=d.get("cmap_ref","")
     cmap_range_v=d.get("cmap_range",""); cmap_symm=d.get("cmap_symm",False)
     cmap_palette=d.get("cmap_palette",""); cbar=d.get("cbar",False)
     measure=d.get("measure",""); vector_data=d.get("vector_data","")
@@ -721,7 +875,8 @@ def render_molecule_legacy():
     mo_upsample=d.get("mo_upsample",""); flat_mo=d.get("flat_mo",False)
     mo_outline_width=d.get("mo_outline_width",""); mo_outline_color=d.get("mo_outline_color","")
     dens=d.get("dens",False); dens_color=d.get("dens_color","")
-    esp_file=d.get("esp_file",""); nci_surf=d.get("nci_surf_file","")
+    esp_file=d.get("esp_file",""); esp_ref=d.get("esp_ref","")
+    nci_surf=d.get("nci_surf_file",""); nci_surf_ref=d.get("nci_surf_ref","")
     nci_mode=d.get("nci_mode",""); nci_cutoff=d.get("nci_cutoff","")
     iso_val=d.get("iso",""); opacity=d.get("opacity","")
     hull=d.get("hull",""); hull_color=d.get("hull_color","")
@@ -760,8 +915,13 @@ def render_molecule_legacy():
     # Input path
     if smi: input_path=None; stem="smiles_render"
     else:
-        if not mol_file: return jsonify({"error":"No file"}),400
-        input_path=MOLECULES_DIR/Path(mol_file).name
+        if file_ref:
+            try: input_path=CALC_STORE.resolve(str(file_ref))
+            except FileNotFoundError: return jsonify({"error":"CALC input artifact not found"}),404
+            mol_file=input_path.name
+        else:
+            if not mol_file: return jsonify({"error":"No file"}),400
+            input_path=MOLECULES_DIR/Path(mol_file).name
         if not input_path.exists(): return jsonify({"error":f"Not found: {mol_file}"}),404
         stem=input_path.stem
 
@@ -772,8 +932,8 @@ def render_molecule_legacy():
     if nci: parts.append("nci")
     if dens: parts.append("dens")
     if mo: parts.append("mo")
-    if esp_file and not mo and not dens: parts.append("esp")
-    if nci_surf: parts.append("ncisurf")
+    if (esp_file or esp_ref) and not mo and not dens: parts.append("esp")
+    if nci_surf or nci_surf_ref: parts.append("ncisurf")
     if vdw_range is not None: parts.append("vdw")
     if dof: parts.append("dof")
     if glow: parts.append("glow")
@@ -893,6 +1053,15 @@ def render_molecule_legacy():
         if cmap_symm: cmd+=["--cmap-symm"]
         if cmap_palette: cmd+=["--cmap-palette",cmap_palette]
         if cbar: cmd+=["--cbar"]
+    elif cmap_ref:
+        try: calc_cmap=CALC_STORE.resolve(str(cmap_ref))
+        except FileNotFoundError: return jsonify({"error":"CALC color-map artifact not found"}),404
+        cmd+=["--cmap",str(calc_cmap)]
+        pr=cmap_range_v.strip().split()
+        if len(pr)==2: cmd+=["--cmap-range"]+pr
+        if cmap_symm: cmd+=["--cmap-symm"]
+        if cmap_palette: cmd+=["--cmap-palette",cmap_palette]
+        if cbar: cmd+=["--cbar"]
     if vector_data:
         try:
             json.loads(vector_data)
@@ -929,12 +1098,18 @@ def render_molecule_legacy():
     elif dens:
         cmd+=["--dens"]
         if dens_color: cmd+=["--dens-color",dens_color]
-    elif esp_file:
-        ep=MOLECULES_DIR/Path(esp_file).name
+    elif esp_file or esp_ref:
+        if esp_ref:
+            try: ep=CALC_STORE.resolve(str(esp_ref))
+            except FileNotFoundError: return jsonify({"error":"CALC ESP artifact not found"}),404
+        else: ep=MOLECULES_DIR/Path(esp_file).name
         if not ep.exists(): return jsonify({"error":f"ESP cube not found"}),404
         cmd+=["--esp",str(ep)]
-    elif nci_surf:
-        np2=MOLECULES_DIR/Path(nci_surf).name
+    elif nci_surf or nci_surf_ref:
+        if nci_surf_ref:
+            try: np2=CALC_STORE.resolve(str(nci_surf_ref))
+            except FileNotFoundError: return jsonify({"error":"CALC NCI artifact not found"}),404
+        else: np2=MOLECULES_DIR/Path(nci_surf).name
         if not np2.exists(): return jsonify({"error":f"NCI-surf not found"}),404
         cmd+=["--nci-surf",str(np2)]
         if nci_mode: cmd+=["--nci-mode",nci_mode]
@@ -1074,7 +1249,7 @@ def main(argv=None):
     parser.add_argument("--debug", action="store_true", help="启用调试页；自动重载器仍保持关闭")
     args = parser.parse_args(argv)
     print("="*60)
-    print("  xyzrender Web App  V1")
+    print("  xyzrender Web App")
     print(f"  URL       : http://{args.host}:{args.port}")
     print(f"  Molecules : {MOLECULES_DIR.resolve()}")
     print(f"  TEMP      : {TEMP_DIR.resolve()}")
