@@ -1,0 +1,103 @@
+data_FePS3-TS\CONTCAR
+_audit_creation_date              2026-04-06
+_audit_creation_method            'Materials Studio'
+_symmetry_space_group_name_H-M    'P1'
+_symmetry_Int_Tables_number       1
+_symmetry_cell_setting            triclinic
+loop_
+_symmetry_equiv_pos_as_xyz
+  x,y,z
+_cell_length_a                    11.7756
+_cell_length_b                    10.3940
+_cell_length_c                    20.2599
+_cell_angle_alpha                 90.2501
+_cell_angle_beta                  90.2365
+_cell_angle_gamma                 89.9656
+loop_
+_atom_site_label
+_atom_site_type_symbol
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_U_iso_or_equiv
+_atom_site_adp_type
+_atom_site_occupancy
+Fe1    Fe    0.24798   0.17451   0.51999   0.00000  Uiso   1.00
+Fe2    Fe    0.99798   0.32313   0.51999   0.00000  Uiso   1.00
+Fe3    Fe    0.99798   0.67451   0.51999   0.00000  Uiso   1.00
+Fe4    Fe    0.24798   0.82313   0.51999   0.00000  Uiso   1.00
+Fe5    Fe    0.74798   0.17451   0.51999   0.00000  Uiso   1.00
+Fe6    Fe    0.49798   0.32313   0.51999   0.00000  Uiso   1.00
+Fe7    Fe    0.49580   0.66624   0.49229   0.00000  Uiso   1.00
+Fe8    Fe    0.74798   0.82313   0.51999   0.00000  Uiso   1.00
+P1     P     0.24946   0.49882   0.46661   0.00000  Uiso   1.00
+P2     P     0.49946   0.99882   0.46661   0.00000  Uiso   1.00
+P3     P     0.74946   0.49882   0.46661   0.00000  Uiso   1.00
+P4     P     0.99946   0.99882   0.46661   0.00000  Uiso   1.00
+S1     S     0.16928   0.99882   0.44524   0.00000  Uiso   1.00
+S2     S     0.16436   0.33194   0.44340   0.00000  Uiso   1.00
+S3     S     0.41436   0.16570   0.44340   0.00000  Uiso   1.00
+S4     S     0.41928   0.49882   0.44524   0.00000  Uiso   1.00
+S5     S     0.41436   0.83194   0.44340   0.00000  Uiso   1.00
+S6     S     0.16436   0.66570   0.44340   0.00000  Uiso   1.00
+S7     S     0.66928   0.99882   0.44524   0.00000  Uiso   1.00
+S8     S     0.66436   0.33194   0.44340   0.00000  Uiso   1.00
+S9     S     0.91436   0.16570   0.44340   0.00000  Uiso   1.00
+S10    S     0.91928   0.49882   0.44524   0.00000  Uiso   1.00
+S11    S     0.91436   0.83194   0.44340   0.00000  Uiso   1.00
+S12    S     0.66436   0.66570   0.44340   0.00000  Uiso   1.00
+N1     N     0.47906   0.65231   0.57348   0.00000  Uiso   1.00
+O1     O     0.46054   0.58149   0.62163   0.00000  Uiso   1.00
+H1     H     0.42672   0.49557   0.54581   0.00000  Uiso   1.00
+loop_
+_geom_bond_atom_site_label_1
+_geom_bond_atom_site_label_2
+_geom_bond_distance
+_geom_bond_site_symmetry_2
+_ccdc_geom_bond_type
+Fe1    S1      2.540   1_545 S
+Fe1    S2      2.462   .     S
+Fe1    S3      2.506   .     S
+Fe2    S2      2.506   1_655 S
+Fe2    S9      2.454   .     S
+Fe2    S10     2.549   .     S
+Fe3    S6      2.506   1_655 S
+Fe3    S10     2.540   .     S
+Fe3    S11     2.462   .     S
+Fe4    S1      2.549   .     S
+Fe4    S5      2.506   .     S
+Fe4    S6      2.454   .     S
+Fe5    S7      2.540   1_545 S
+Fe5    S8      2.462   .     S
+Fe5    S9      2.506   .     S
+Fe6    S3      2.454   .     S
+Fe6    S4      2.549   .     S
+Fe6    S8      2.506   .     S
+Fe7    S4      2.175   .     S
+Fe7    S5      2.207   .     S
+Fe7    S12     2.222   .     S
+Fe7    N1      1.664   .     S
+Fe8    S7      2.549   .     S
+Fe8    S11     2.506   .     S
+Fe8    S12     2.454   .     S
+P1     S2      2.055   .     S
+P1     S4      2.048   .     S
+P1     S6      2.058   .     S
+P2     S3      2.058   1_565 S
+P2     S5      2.055   .     S
+P2     S7      2.048   .     S
+P3     S8      2.055   .     S
+P3     S10     2.048   .     S
+P3     S12     2.058   .     S
+P4     S1      2.048   1_655 S
+P4     S9      2.058   1_565 S
+P4     S11     2.055   .     S
+S1     P4      2.048   1_455 S
+S1     Fe1     2.540   1_565 S
+S2     Fe2     2.506   1_455 S
+S3     P2      2.058   1_545 S
+S4     H1      2.039   .     S
+S6     Fe3     2.506   1_455 S
+S7     Fe5     2.540   1_565 S
+S9     P4      2.058   1_545 S
+N1     O1      1.245   .     S

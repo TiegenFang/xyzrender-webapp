@@ -1,8 +1,39 @@
-﻿FIGURE/*
-!FIGURE/.gitkeep
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
 .venv/
 venv/
-tmp_config.json
+
+# Build and packaging
+build/
+dist/
+desktop/__pycache__/
+*.egg-info/
+
+# Runtime output
+TEMP/*
+FIGURE/*
+flask_stdout.log
+flask_stderr.log
+logs/
+
+# Archived desktop implementation (kept locally under old/)
+old/
+
+# Local reference material and third-party applications
+ref-pretty-lattice/
+references/
+参考软件/
+
+# Keep runtime directories visible when empty
+!TEMP/.gitkeep
+!FIGURE/.gitkeep
+
+# IDE and OS
+.idea/
+.vscode/
 .DS_Store
+Thumbs.db

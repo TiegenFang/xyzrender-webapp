@@ -1,3 +1,5 @@
 flask>=3.0.0
 numpy>=1.24
-xyzrender[all]
+xyzrender==0.3.1
+ase>=3.26
+rdkit>=2025.3

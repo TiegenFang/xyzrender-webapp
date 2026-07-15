@@ -1,0 +1,15 @@
+TITLE      test
+REMARK   1 File created by GaussView 6.0.16
+HETATM    1  C1  Eso     1      -1.674  -2.499  -0.000                       C
+HETATM    2  C2  Eso     1      -1.368  -1.014  -0.000                       C
+HETATM    3  O3  Eso     1       0.048  -0.848   0.000                       O
+HETATM    4  H4  Eso     1      -2.763  -2.665  -0.000                       H
+HETATM    5  H5  Eso     1      -1.249  -2.985   0.892                       H
+HETATM    6  H6  Eso     1      -1.249  -2.985  -0.892                       H
+HETATM    7  H7  Eso     1      -1.800  -0.522   0.890                       H
+HETATM    8  H8  Eso     1      -1.800  -0.522  -0.890                       H
+HETATM    9  S9  Eso     1       0.595   0.742   0.000                       S
+HETATM   10  O10 Eso     1       2.056   0.535   0.000                       O
+HETATM   11  O11 Eso     1       0.048   1.337   1.242                       O
+HETATM   12  O12 Eso     1       0.048   1.337  -1.242                       O
+END
