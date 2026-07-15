@@ -258,7 +258,7 @@ class MultiwfnPackageGenerator:
             lines += [f"echo Running {job.job_id}...", f"pushd \"%ROOT%jobs\\{job.job_id}\"",
                       f"\"%MULTIWFN%\" \"%SOURCE%\"{(' ' + args) if args else ''} < input.txt > multiwfn.out 2>&1",
                       "if errorlevel 1 echo WARNING: Multiwfn returned an error. See multiwfn.out", "popd"]
-        return "\r\n".join(lines + ["echo All tasks finished.", "endlocal", ""]) 
+        return "\r\n".join(lines + ["echo All tasks finished.", "endlocal", ""])
 
     @staticmethod
     def _posix_launcher(jobs: list[OfflineJob]) -> str:
