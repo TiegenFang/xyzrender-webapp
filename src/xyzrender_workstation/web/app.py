@@ -1,7 +1,7 @@
 """
-xyzrender Web Application  v5
+xyzrender Web Application  V1
 ══════════════════════════════════════════════════════════
-Changes in v5:
+Changes in V1:
   • TEMP/  — all renders go here first (auto-cleared on startup)
   • FIGURE/ — only explicitly saved files land here
   • /api/temp_figures   — list TEMP
@@ -11,7 +11,7 @@ Changes in v5:
 """
 
 import argparse
-import json, logging, math, os, shutil, subprocess
+import json, logging, math, os, shlex, shutil, subprocess
 from pathlib import Path
 
 import numpy as np
@@ -307,6 +307,169 @@ def _parse_mol_coords(path):
         pass
     return symbols, coords
 
+
+_COVALENT_RADII = {
+    "H": 0.31, "B": 0.84, "C": 0.76, "N": 0.71, "O": 0.66,
+    "F": 0.57, "Si": 1.11, "P": 1.07, "S": 1.05, "Cl": 1.02,
+    "Br": 1.20, "I": 1.39, "Al": 1.21, "Na": 1.66, "Mg": 1.41,
+    "Ca": 1.76, "Fe": 1.32, "Cu": 1.32, "Zn": 1.22,
+}
+
+
+def _infer_bonds(symbols, coords):
+    """Conservative fallback for formats without an explicit bond table."""
+    bonds = []
+    for i in range(len(symbols)):
+        ri = _COVALENT_RADII.get(symbols[i], 0.77)
+        for j in range(i + 1, len(symbols)):
+            rj = _COVALENT_RADII.get(symbols[j], 0.77)
+            distance = float(np.linalg.norm(coords[i] - coords[j]))
+            if 0.35 < distance <= (ri + rj) * 1.22:
+                bonds.append([i, j])
+    return bonds
+
+
+def _read_cif_loops(text):
+    """Yield (headers, rows) from simple CIF loop blocks."""
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        if lines[i].strip().lower() != "loop_":
+            i += 1
+            continue
+        i += 1
+        headers = []
+        while i < len(lines) and lines[i].strip().startswith("_"):
+            headers.append(lines[i].strip().lower())
+            i += 1
+        rows = []
+        while i < len(lines):
+            line = lines[i].strip()
+            if not line or line.startswith("#"):
+                i += 1
+                if rows:
+                    break
+                continue
+            if line.lower() == "loop_" or line.startswith("_"):
+                break
+            try:
+                rows.append(shlex.split(line, comments=False, posix=True))
+            except ValueError:
+                rows.append(line.split())
+            i += 1
+        if headers:
+            yield headers, rows
+
+
+def _explicit_bonds(path, symbols, coords):
+    """Read file-defined connectivity and return None when no bond table exists."""
+    ext = path.suffix.lower()
+    text = path.read_text(encoding="utf-8", errors="replace")
+    lines = text.splitlines()
+
+    if ext in (".mol", ".sdf") and len(lines) >= 4:
+        try:
+            atom_count = int(lines[3][0:3])
+            bond_count = int(lines[3][3:6])
+            bonds = []
+            for line in lines[4 + atom_count:4 + atom_count + bond_count]:
+                a = int(line[0:3]) - 1
+                b = int(line[3:6]) - 1
+                if 0 <= a < len(symbols) and 0 <= b < len(symbols) and a != b:
+                    bonds.append(sorted([a, b]))
+            return sorted({tuple(b) for b in bonds})
+        except (ValueError, IndexError):
+            return None
+
+    if ext in (".pdb", ".ent"):
+        serial_to_index = {}
+        for line in lines:
+            if line.startswith(("ATOM  ", "HETATM")):
+                try:
+                    serial_to_index[int(line[6:11])] = len(serial_to_index)
+                except ValueError:
+                    continue
+        bonds = set()
+        found_table = False
+        for line in lines:
+            if not line.startswith("CONECT"):
+                continue
+            found_table = True
+            fields = line[6:].split()
+            if not fields:
+                continue
+            try:
+                source = serial_to_index[int(fields[0])]
+                for raw in fields[1:]:
+                    target = serial_to_index.get(int(raw))
+                    if target is not None and target != source:
+                        bonds.add(tuple(sorted((source, target))))
+            except (ValueError, KeyError):
+                continue
+        return sorted(bonds) if found_table else None
+
+    if ext == ".mol2":
+        bonds = set()
+        in_bonds = False
+        found_table = False
+        for line in lines:
+            upper = line.strip().upper()
+            if upper == "@<TRIPOS>BOND":
+                in_bonds = True
+                found_table = True
+                continue
+            if in_bonds and upper.startswith("@<TRIPOS>"):
+                break
+            if in_bonds:
+                fields = line.split()
+                if len(fields) >= 4:
+                    try:
+                        a, b = int(fields[1]) - 1, int(fields[2]) - 1
+                        if 0 <= a < len(symbols) and 0 <= b < len(symbols) and a != b:
+                            bonds.add(tuple(sorted((a, b))))
+                    except ValueError:
+                        continue
+        return sorted(bonds) if found_table else None
+
+    if ext in (".cif", ".mmcif"):
+        atom_labels = []
+        geom_rows = None
+        geom_headers = None
+        for headers, rows in _read_cif_loops(text):
+            if any(h.startswith("_atom_site") for h in headers):
+                label_col = next((i for i, h in enumerate(headers) if h == "_atom_site_label"), None)
+                if label_col is not None:
+                    atom_labels = [row[label_col] for row in rows if label_col < len(row)]
+            if any(h.startswith("_geom_bond") for h in headers):
+                geom_headers, geom_rows = headers, rows
+        if geom_headers is not None:
+            label_to_index = {label: i for i, label in enumerate(atom_labels)}
+            c1 = next((i for i, h in enumerate(geom_headers) if "atom_site_label_1" in h), None)
+            c2 = next((i for i, h in enumerate(geom_headers) if "atom_site_label_2" in h), None)
+            bonds = set()
+            if c1 is not None and c2 is not None:
+                for row in geom_rows or []:
+                    if max(c1, c2) >= len(row):
+                        continue
+                    a, b = label_to_index.get(row[c1]), label_to_index.get(row[c2])
+                    if a is None or b is None or a == b:
+                        continue
+                    # Periodic-image bonds cannot be drawn without duplicating atoms.
+                    # Keep only pairs represented by the coordinates in this canvas.
+                    cutoff = (_COVALENT_RADII.get(symbols[a], 0.77) + _COVALENT_RADII.get(symbols[b], 0.77)) * 1.35
+                    if float(np.linalg.norm(coords[a] - coords[b])) <= cutoff:
+                        bonds.add(tuple(sorted((a, b))))
+            return sorted(bonds)
+
+    return None
+
+
+def _load_bonds(path, symbols, coords):
+    explicit = _explicit_bonds(path, symbols, coords)
+    if explicit is not None:
+        return [list(pair) for pair in explicit], "file"
+    return _infer_bonds(symbols, coords), "inferred"
+
 def _write_xyz(path,symbols,coords,comment="rotated"):
     lines=[str(len(symbols)),comment]
     for sym,(x,y,z) in zip(symbols,coords):
@@ -443,7 +606,9 @@ def get_xyz():
     if not path.exists(): return jsonify({"error":"Not found"}),404
     try:
         symbols,coords,comment=_load_coords(path)
-        return jsonify({"symbols":symbols,"coords":coords.tolist(),"n":len(symbols),"comment":comment})
+        bonds,bond_source=_load_bonds(path,symbols,coords)
+        return jsonify({"symbols":symbols,"coords":coords.tolist(),"bonds":bonds,
+                        "bond_source":bond_source,"n":len(symbols),"comment":comment})
     except ValueError as e: return jsonify({"error":str(e)}),500
 
 
@@ -909,7 +1074,7 @@ def main(argv=None):
     parser.add_argument("--debug", action="store_true", help="启用调试页；自动重载器仍保持关闭")
     args = parser.parse_args(argv)
     print("="*60)
-    print("  xyzrender Web App  v5")
+    print("  xyzrender Web App  V1")
     print(f"  URL       : http://{args.host}:{args.port}")
     print(f"  Molecules : {MOLECULES_DIR.resolve()}")
     print(f"  TEMP      : {TEMP_DIR.resolve()}")

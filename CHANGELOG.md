@@ -200,3 +200,60 @@ This append-only file records user-requested changes made to this project.
   - python -m pytest -q: 25 passed
   - Remote main matched local source commit 61042bc6382ecac74bb83af0de16fb0e2ab75a2e before the release-log follow-up commit
   - GitHub Release v0.2.0 asset uploaded: 88,111,234 bytes; SHA256 69FC555E2CC3D8417DD570E09607B38323399B0C1EB7112379D2C2C455F58A82
+
+## 2026-07-15 16:14:18+08:00
+
+- Request: Optimize the V1 web rotation workflow by merging live orientation control with the render preview.
+- Status: Completed
+- Changes:
+  - Replaced the modal orientation page with an inline two-pane workspace: live molecular rotation on the left and rendered artwork on the right.
+  - Ported quaternion arcball rotation, right-drag panning, wheel zoom, keyboard rotation, reset, PCA alignment, live axes, and orientation-matrix feedback from the reference desktop canvas.
+  - Connected “apply orientation and render” to bake the current matrix into a rotated structure, reload the live canvas, and refresh the right-side result without double-applying the pose.
+  - Added responsive V1 presentation styling, unified the visible V1 version label, and added a structural regression test.
+- Files:
+  - `scripts/build_html.py`
+  - `src/xyzrender_workstation/web/app.py`
+  - `src/xyzrender_workstation/web/static/pretty_lattice_refresh.css`
+  - `src/xyzrender_workstation/web/templates/index.html`
+  - `tests/test_flask_compat.py`
+- Verification:
+  - `python -m py_compile scripts\\build_html.py src\\xyzrender_workstation\\web\\app.py`
+  - `python scripts\\build_html.py`
+  - `python -m pytest tests\\test_flask_compat.py`: 4 passed
+  - Browser at 1280x720: panes side by side with no overlap; molecule selection, drag rotation, matrix update, orientation bake, and SVG refresh passed; zero console errors
+
+## 2026-07-15 16:33:20+08:00
+
+- Request: 优化V1实时旋转画布风格并修正渲染预览居中缩放
+- Status: Completed
+- Changes:
+  - 参考桌面端MolCanvas接入17套实时画布风格预设及下拉切换，覆盖背景、配色、渐变、键线、阴影与轮廓
+  - 让SVG和位图预览按右侧容器自适应缩放、保持比例居中并充分利用横向空间
+  - 补充V1页面结构回归断言并重新生成HTML模板
+- Files:
+  - `scripts/build_html.py`
+  - `src/xyzrender_workstation/web/templates/index.html`
+  - `src/xyzrender_workstation/web/static/pretty_lattice_refresh.css`
+  - `tests/test_flask_compat.py`
+- Verification:
+  - python -m pytest: 26 passed
+  - Browser check: style switching redraws the live canvas and generated SVG fills and centers in the render pane
+  - git diff --check: passed
+
+## 2026-07-15 16:40:54+08:00
+
+- Request: 修复实时旋转画布误连键与风格背景残留
+- Status: Completed
+- Changes:
+  - 为实时视角API增加PDB、MOL/SDF、MOL2、CIF显式键表读取，并对无键表格式使用保守共价半径推断
+  - 前端改为仅绘制后端返回的键表，移除宽阈值全原子试连
+  - 移除风格十字环装饰并在每帧重置Canvas绘制状态，避免旋转背景与残影
+- Files:
+  - `src/xyzrender_workstation/web/app.py`
+  - `scripts/build_html.py`
+  - `src/xyzrender_workstation/web/templates/index.html`
+  - `tests/test_flask_compat.py`
+- Verification:
+  - python -m pytest: 27 passed
+  - Browser check: c2c1im ring connectivity is correct and HoukPremium remains clean after X/Y/Z rotation
+  - git diff --check: passed

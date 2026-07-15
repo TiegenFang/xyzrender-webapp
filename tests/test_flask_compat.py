@@ -39,3 +39,41 @@ def test_original_web_highlight_region_and_annotation_features():
     assert "--region 4-6 flat" in command
     assert "--idx n" in command
     assert "--ts-bond 1-2" in command
+
+
+def test_v1_embeds_orientation_canvas_beside_render_output():
+    response = app.test_client().get("/")
+    html = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert '<span class="release-label">V1</span>' in html
+    assert 'id="view-workspace"' in html
+    assert html.index('id="orientation-pane"') < html.index('id="render-pane"')
+    assert 'id="molc"' in html
+    assert 'id="viewer-style"' in html
+    assert "style:'HoukMol'" in html
+    assert "preserveAspectRatio','xMidYMid meet'" in html
+    assert "for(const pair of bonds||[])" in html
+    assert "if(st.crosshair)" not in html
+    assert 'id="vapl"' in html
+    assert 'loadViewer(name)' in html
+    assert "mc.addEventListener('pointerdown'" in html
+    assert 'id="vmodal"' not in html
+    assert 'id="ovbtn"' not in html
+
+
+def test_orientation_api_returns_file_or_conservative_connectivity():
+    client = app.test_client()
+
+    pdb = client.post("/api/get_xyz", json={"file": "c2c1im.pdb"})
+    assert pdb.status_code == 200
+    pdb_data = pdb.get_json()
+    assert pdb_data["bond_source"] == "inferred"
+    assert len(pdb_data["bonds"]) == 19
+    assert [0, 2] not in pdb_data["bonds"]  # non-neighbouring ring atoms
+
+    mol = client.post("/api/get_xyz", json={"file": "HAN.mol"})
+    assert mol.status_code == 200
+    mol_data = mol.get_json()
+    assert mol_data["bond_source"] == "file"
+    assert len(mol_data["bonds"]) == 7

@@ -1088,3 +1088,309 @@ textarea {
   .render-summary small,
   #gal > summary small { display: none; }
 }
+
+/* --------------------------------------------------------------------------
+   V1 inline orientation workspace
+   Arcball interaction and final rendering share one uninterrupted work area.
+   -------------------------------------------------------------------------- */
+.release-label {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--outline2);
+  border-radius: 4px;
+  color: var(--on-sm);
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.view-flow-note {
+  margin: 0 0 12px;
+  padding: 8px 9px;
+  border: 1px solid var(--outline);
+  border-radius: 5px;
+  background: var(--s2);
+  color: var(--on-sm);
+  font-size: .7rem;
+  line-height: 1.55;
+}
+
+#preview-panel .pb {
+  display: flex;
+  min-height: 0;
+  padding: 10px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+#view-workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(300px, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 10px;
+}
+
+.workspace-pane {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--outline);
+  border-radius: 5px;
+  background: var(--s1);
+}
+
+.workspace-head {
+  display: flex;
+  min-height: 50px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--outline);
+  background: var(--s1);
+}
+.workspace-head h3 {
+  color: var(--on-s);
+  font-family: "Segoe UI Variable Display", "Microsoft YaHei UI", sans-serif;
+  font-size: .78rem;
+  font-weight: 650;
+}
+.workspace-head p {
+  margin-top: 1px;
+  color: var(--on-sv);
+  font-size: .62rem;
+}
+.viewer-head-tools {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+}
+.viewer-head-tools label {
+  color: var(--on-sv);
+  font-size: .59rem;
+}
+#viewer-style {
+  min-width: 88px;
+  height: 25px;
+  padding: 2px 22px 2px 7px;
+  border: 1px solid var(--outline);
+  border-radius: 4px;
+  background: var(--s2);
+  color: var(--on-sm);
+  font-family: "Segoe UI Variable Text", "Microsoft YaHei UI", sans-serif;
+  font-size: .61rem;
+}
+
+#viewer-state,
+.render-format {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border: 1px solid var(--outline);
+  border-radius: 4px;
+  color: var(--on-sv);
+  font-size: .6rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+#viewer-state[data-state="ready"],
+#viewer-state[data-state="applied"] {
+  border-color: color-mix(in srgb, var(--pc) 32%, var(--outline));
+  background: var(--pc-bg);
+  color: var(--pc);
+}
+#viewer-state[data-state="changed"],
+#viewer-state[data-state="loading"] { color: var(--amber); }
+#viewer-state[data-state="error"] { color: var(--red); }
+.render-format { color: var(--pc); }
+
+#orientation-pane #vwrap {
+  position: relative;
+  min-height: 260px;
+  flex: 1 1 auto;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--cvbg);
+  box-shadow: none;
+}
+
+#molc {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  outline: none;
+  touch-action: none;
+}
+#molc:active { cursor: grabbing; }
+#molc:focus-visible { box-shadow: inset 0 0 0 2px var(--pc); }
+
+#vhud {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  padding: 8px;
+  pointer-events: none;
+}
+#vhud .hchip,
+.matrix-popover {
+  max-width: 68%;
+  border: 1px solid color-mix(in srgb, var(--outline) 74%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--s1) 88%, transparent);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+}
+#vhud .hchip {
+  overflow: hidden;
+  padding: 5px 7px;
+  color: var(--on-sm);
+  font-size: .64rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#vhud .hchip strong {
+  color: var(--on-sv);
+  font-size: .54rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+}
+.matrix-popover {
+  position: relative;
+  max-width: none;
+  pointer-events: auto;
+}
+.matrix-popover summary {
+  padding: 5px 7px;
+  color: var(--on-sm);
+  font-size: .6rem;
+  cursor: pointer;
+  list-style: none;
+}
+.matrix-popover summary::-webkit-details-marker { display: none; }
+.matrix-popover[open] #hmx {
+  display: block;
+  padding: 0 7px 6px;
+}
+#hmx {
+  display: none;
+  margin: 0;
+  color: var(--on-sm);
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: .55rem;
+  line-height: 1.45;
+}
+#axisc { bottom: 10px; right: 10px; }
+
+#orientation-pane #vctrl {
+  width: auto;
+  max-width: none;
+  flex: 0 0 auto;
+  padding: 8px 9px 9px;
+  gap: 7px;
+  border: 0;
+  border-top: 1px solid var(--outline);
+  border-radius: 0;
+  background: var(--s1);
+  box-shadow: none;
+}
+.viewer-shortcuts {
+  color: var(--on-sv);
+  font-size: .59rem;
+}
+.viewer-shortcuts .kbd {
+  padding: 2px 4px;
+  border-color: var(--outline);
+  background: var(--s2);
+  color: var(--on-sm);
+}
+.viewer-actions { flex-wrap: nowrap; }
+.viewer-actions label,
+#spdval { color: var(--on-sv); font-size: .62rem; }
+#spdslider { min-width: 54px; flex: 1 1 70px; }
+.viewer-actions .vbtn {
+  min-height: 30px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-family: "Segoe UI Variable Text", "Microsoft YaHei UI", sans-serif;
+  font-size: .66rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.viewer-actions .vbtn.sec {
+  border-color: var(--outline);
+  background: var(--s2);
+  color: var(--on-sm);
+}
+.viewer-actions .vbtn.pri {
+  flex: 0 1 auto;
+  border-color: var(--pc);
+  background: var(--pc);
+  color: #fff;
+}
+.viewer-actions .vbtn.pri:hover { background: color-mix(in srgb, var(--pc) 88%, #000); }
+
+#render-pane #vp {
+  min-height: 260px;
+  flex: 1 1 auto;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+#render-pane #pimg,
+#render-pane #psvg {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+#render-pane #pimg { object-fit: contain; object-position: center; }
+#render-pane #psvg {
+  align-items: center;
+  justify-content: center;
+  filter: none;
+}
+#render-pane #psvg > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+#render-pane #ptb {
+  min-height: 48px;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 8px 9px;
+  border-top: 1px solid var(--outline);
+}
+#render-pane #pfn { min-width: 80px; }
+#preview-panel #gal {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+@media (max-width: 1180px) {
+  #view-workspace { grid-template-columns: 1fr; overflow-y: auto; }
+  .workspace-pane { min-height: 440px; }
+}
+
+@media (max-width: 680px) {
+  #preview-panel { height: 980px; }
+  #preview-panel .pb { overflow: visible; }
+  #view-workspace { overflow: visible; }
+  .workspace-pane { min-height: 430px; }
+  .viewer-shortcuts { display: none; }
+  .viewer-actions { flex-wrap: wrap; }
+}
