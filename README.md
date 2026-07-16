@@ -29,6 +29,7 @@ Web 版：
 
 ```powershell
 python -m pip install -r requirements.txt
+pip install --upgrade git+https://github.com/aligfellow/xyzrender.git
 ```
 
 Web 版不需要 pywebview 或 PyInstaller；桌面打包依赖单独位于
