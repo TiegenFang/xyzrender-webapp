@@ -10,7 +10,7 @@ venv/
 # Build and packaging
 build/
 dist/
-dist-self-test-data/
+dist-self-test-data*/
 desktop/__pycache__/
 *.egg-info/
 

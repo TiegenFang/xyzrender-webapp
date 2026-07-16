@@ -1,5 +1,5 @@
 #define MyAppName "XYZRender Workstation"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "XYZRender Workstation"
 #define MyAppExeName "XYZRender Workstation.exe"
 
@@ -26,6 +26,7 @@ VersionInfoVersion={#MyAppVersion}
 VersionInfoProductName={#MyAppName}
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=Offline molecular rendering workstation
+SetupIconFile=assets\xyzrender-workstation.ico
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

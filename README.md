@@ -1,6 +1,6 @@
 # XYZRender Workstation
 
-基于 `xyzrender 0.3.1` 的分子与量子化学 Flask Web 可视化工作站。
+基于 `xyzrender 0.3.6` 的分子与量子化学 Flask Web 可视化工作站。
 
 ## 项目结构
 
@@ -120,6 +120,6 @@ python build_html.py
 ```
 
 产物位于 `dist\XYZRender Workstation\`（PyInstaller onedir）和
-`dist\installer\XYZRender-Workstation-1.0.0-Setup.exe`（Inno Setup）。用户的
+`dist\installer\XYZRender-Workstation-1.0.1-Setup.exe`（Inno Setup）。用户的
 MOLECULES、TEMP、FIGURE 与日志保存在 `%LOCALAPPDATA%\XYZRender Workstation`，
 不会写入安装目录，也不会在升级或默认卸载时删除。

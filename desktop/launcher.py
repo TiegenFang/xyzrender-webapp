@@ -219,7 +219,7 @@ def run_self_test(data_root: Path | None = None) -> int:
 
         sdf_path = paths.molecules / "desktop-self-test.sdf"
         sdf_path.write_text((paths.molecules / "HAN.mol").read_text(encoding="utf-8") + "\n$$$$\n", encoding="utf-8")
-        input_names = ("caffeine.xyz", "c2SO4.pdb", "HAN.mol", sdf_path.name)
+        input_names = ("caffeine.xyz", "c2SO4.pdb", "HAN.mol", sdf_path.name, "Al2O3.cif")
         for name in input_names:
             response = client.post("/api/render", json={"file": name, "format": "svg", "style": "default"})
             payload = response.get_json() or {}

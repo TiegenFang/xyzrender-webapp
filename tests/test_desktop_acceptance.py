@@ -151,7 +151,10 @@ def test_packaging_contract_preserves_user_data():
     installer = (ROOT / "desktop" / "installer.iss").read_text(encoding="utf-8")
     assert "COLLECT(" in spec and 'name="XYZRender Workstation"' in spec
     assert "web\" / \"templates" in spec and "web\" / \"static" in spec
+    assert 'collect_submodules("ase.io")' in spec and 'collect_data_files("ase")' in spec
+    assert 'xyzrender-workstation.ico' in spec
     assert "XYZRender Workstation\\*" in installer
+    assert "SetupIconFile=assets\\xyzrender-workstation.ico" in installer
     assert "[UninstallDelete]" not in installer
     assert "LOCALAPPDATA" in installer
     assert "AppId={{8A784CF2-E228-45A1-B7C1-A5A51E22392B}" in installer

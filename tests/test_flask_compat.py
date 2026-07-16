@@ -9,7 +9,7 @@ def test_flask_default_render_and_capabilities():
     assert health.get_json()["ok"] is True
     capabilities = client.get("/api/capabilities")
     assert capabilities.status_code == 200
-    assert capabilities.get_json()["xyzrender_version"] == "0.3.1"
+    assert capabilities.get_json()["xyzrender_version"] == "0.3.6"
     response = client.post("/api/render", json={"file": "caffeine.xyz", "format": "svg", "style": "default"})
     assert response.status_code == 200
     assert response.get_json()["ok"] is True

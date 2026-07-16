@@ -13,10 +13,16 @@ datas = [
     (str(SRC / "xyzrender_workstation" / "web" / "static"), "xyzrender_workstation/web/static"),
 ]
 binaries = []
-hiddenimports = collect_submodules("xyzrender") + collect_submodules("xyzgraph")
+hiddenimports = (
+    collect_submodules("xyzrender")
+    + collect_submodules("xyzgraph")
+    + collect_submodules("ase.io")
+    + ["scipy._cyutility"]
+)
 datas += collect_data_files("xyzrender")
 datas += collect_data_files("xyzgraph")
 datas += collect_data_files("rdkit")
+datas += collect_data_files("ase")
 for distribution in ("xyzrender", "xyzgraph", "Flask", "pywebview", "numpy", "ase", "rdkit"):
     try:
         datas += copy_metadata(distribution)
@@ -51,6 +57,7 @@ exe = EXE(
     upx=True,
     console=False,
     disable_windowed_traceback=False,
+    icon=str(ROOT / "desktop" / "assets" / "xyzrender-workstation.ico"),
 )
 coll = COLLECT(
     exe,

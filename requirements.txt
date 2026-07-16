@@ -1,5 +1,5 @@
 flask>=3.0.0
 numpy>=1.24
-xyzrender==0.3.1
+xyzrender @ git+https://github.com/aligfellow/xyzrender.git@6802a375e3378658186d7b930770fb60440fdb23
 ase>=3.26
 rdkit>=2025.3
