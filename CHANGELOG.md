@@ -335,3 +335,34 @@ This append-only file records user-requested changes made to this project.
   - Frozen desktop --self-test: exit 0; SVG, PNG, PDF, GIF, upload and save checks passed
   - GitHub Release v1.0.0: published, not draft/prerelease; all three assets uploaded
   - Remote main matched local commit 175cea50fe2fbe5819a9ab4a36a1decd677b7b9c before the release-log commit
+
+## 2026-07-16 12:51:20+08:00
+
+- Request: 升级桌面版内置 xyzrender/CIF 支持，更新应用图标并发布 v1.0.1
+- Status: Completed
+- Changes:
+  - 将 xyzrender 固定到上游提交 6802a375e3378658186d7b930770fb60440fdb23（0.3.6），并纳入 xyzgraph 1.6.13 与 ASE。
+  - 修复 PyInstaller 漏收 scipy._cyutility 导致 ASE CIF 解析失败的问题，加入真实 CIF 冻结包验收。
+  - 生成透明分子视口新图标，并同时应用到主程序与安装器。
+  - 版本提升至 1.0.1，重新生成安装包、便携包和校验文件并发布 GitHub Release。
+- Files:
+  - `.gitignore`
+  - `README.md`
+  - `desktop/BUILD.md`
+  - `desktop/assets/xyzrender-icon.png`
+  - `desktop/assets/xyzrender-workstation.ico`
+  - `desktop/installer.iss`
+  - `desktop/launcher.py`
+  - `desktop/xyzrender_workstation.spec`
+  - `pyproject.toml`
+  - `requirements.txt`
+  - `src/xyzrender_workstation/__init__.py`
+  - `tests/test_desktop_acceptance.py`
+  - `tests/test_flask_compat.py`
+- Verification:
+  - pytest：44 项全部通过。
+  - 本地最新 xyzrender 直接渲染 Al2O3.cif 成功。
+  - PyInstaller 与 Inno Setup 构建成功。
+  - 冻结版自检退出码为 0，CIF 输出 SVG 55,421 字节，XYZ/PDB/MOL/SDF 与 SVG/PNG/PDF/GIF 流程均通过。
+  - 从 EXE 提取图标并进行视觉检查，16–256 px 图标资源齐全。
+  - GitHub v1.0.1 Release 已发布，安装包、便携包与 SHA256 校验文件均上传成功。
